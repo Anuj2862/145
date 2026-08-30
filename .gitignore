@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+*.pyo
 
 # Environments & Virtualenvs
 .venv/
@@ -10,12 +11,21 @@ env/
 venv/
 ENV/
 
-# Testing & Coverage
+# Testing & Tooling
 .pytest_cache/
+.mypy_cache/
 .coverage
 htmlcov/
 
 # IDEs & System
 .DS_Store
+Thumbs.db
 .idea/
 .vscode/
+
+# PCAP captures & Large Files
+*.pcap
+*.pcapng
+
+# Logs
+*.log
