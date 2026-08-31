@@ -94,5 +94,8 @@ def build_alert_from_signal(
         protocol=protocol,
         summary=summary,
         evidence_count=evidence_count,
+        detector_id=signal.detector_id,
+        decision_reason=signal.decision_reason,
+        observable_features=signal.observable_features,
     )
     return alert

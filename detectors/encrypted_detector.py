@@ -113,6 +113,7 @@ class EncryptedThreatDetector:
                       severity: Severity, indicators: dict) -> DetectionSignal:
         signal_id = f"sig-enc-{uuid.uuid4().hex[:8]}"
         indicators["encrypted_threat_score"] = score
+        now_ts = datetime.now(timezone.utc).isoformat()
         
         target_entity = None
         if fv.flow_id:
@@ -120,6 +121,30 @@ class EncryptedThreatDetector:
                 target_entity = fv.flow_id.split("-")[1].split(":")[0]
             except Exception:
                 pass
+
+        decision_reasons = []
+        tlf = fv.tls_features
+        if tlf and tlf.ja3_hash:
+            decision_reasons.append("suspicious_ja3_fingerprint_match")
+        if indicators.get("context_temporal_used"):
+            decision_reasons.append("correlated_temporal_periodicity_observed")
+
+        observable_features = {
+            "ja3_hash": getattr(tlf, "ja3_hash", None) if tlf else None,
+            "ja4_hash": getattr(tlf, "ja4_hash", None) if tlf else None,
+            "sni": getattr(tlf, "sni", None) if tlf else None,
+            "alpn": getattr(tlf, "alpn", None) if tlf else None,
+        }
+
+        from schemas import SignalProvenance
+        prov = SignalProvenance(
+            detector_id="EncryptedThreatDetector",
+            detector_version="1.0.0",
+            decision_reason=decision_reasons,
+            observable_features=observable_features,
+            window_start_iso=fv.timestamp_iso,
+            window_end_iso=now_ts,
+        )
                 
         return DetectionSignal(
             signal_id=signal_id,
@@ -129,6 +154,11 @@ class EncryptedThreatDetector:
             severity=severity,
             source_entity=fv.entity_ip,
             target_entity=target_entity,
-            timestamp_iso=datetime.now(timezone.utc).isoformat(),
-            indicators=indicators
+            timestamp_iso=now_ts,
+            indicators=indicators,
+            detector_id="EncryptedThreatDetector",
+            detector_version="1.0.0",
+            decision_reason=decision_reasons,
+            observable_features=observable_features,
+            provenance=prov,
         )

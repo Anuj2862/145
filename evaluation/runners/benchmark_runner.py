@@ -349,6 +349,10 @@ class BenchmarkRunner:
             ]
             if active_signals:
                 signals_count += len(active_signals)
+                for s in active_signals:
+                    if s.provenance is not None:
+                        s.provenance.capture_id = record.capture_id
+                        s.provenance.ground_truth_label = gt_class.value
                 top_signal = max(active_signals, key=lambda s: s.confidence)
                 try:
                     pred_class = EvaluationTrafficClass(top_signal.threat_class.value)

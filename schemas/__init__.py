@@ -151,8 +151,23 @@ class FeatureVector(BaseModel):
     entity_features: Optional[EntityFeatures] = Field(default=None)
 
 
+class SignalProvenance(BaseModel):
+    """Forensic and scientific provenance metadata for a DetectionSignal (Phase 2C)."""
+    model_config = ConfigDict(extra="ignore")
+
+    detector_id: str = Field(..., description="Identifying name of detector algorithm")
+    detector_version: str = Field(default="1.0.0", description="Semantic version of detector")
+    decision_reason: List[str] = Field(default_factory=list, description="Machine-readable trigger criteria")
+    observable_features: Dict[str, Any] = Field(default_factory=dict, description="Exact feature values used in decision")
+    window_start_iso: Optional[str] = Field(default=None, description="Start of temporal observation window")
+    window_end_iso: Optional[str] = Field(default=None, description="End of temporal observation window")
+    experiment_id: Optional[str] = Field(default=None, description="Evaluation experiment ID if applicable")
+    capture_id: Optional[str] = Field(default=None, description="PCAP capture ID if applicable")
+    ground_truth_label: Optional[str] = Field(default=None, description="Manifest ground-truth label during evaluation")
+
+
 class DetectionSignal(BaseModel):
-    """Individual threat detector output signal.
+    """Individual threat detector output signal with forensic provenance.
     
     Produced by: detectors/ (Member 2)
     Consumed by: entity/ & fusion/ (Member 3)
@@ -168,6 +183,13 @@ class DetectionSignal(BaseModel):
     target_entity: Optional[str] = Field(default=None, description="Target/victim IP or domain")
     timestamp_iso: str = Field(..., description="Detection timestamp")
     indicators: Dict[str, Any] = Field(default_factory=dict, description="Key metrics triggering detection")
+
+    # Phase 2C Provenance & Explainability (Backwards-compatible)
+    detector_id: Optional[str] = Field(default=None, description="Identifying name of detector algorithm")
+    detector_version: Optional[str] = Field(default="1.0.0", description="Semantic version of detector")
+    decision_reason: List[str] = Field(default_factory=list, description="Machine-readable trigger criteria")
+    observable_features: Dict[str, Any] = Field(default_factory=dict, description="Exact feature values used in decision")
+    provenance: Optional[SignalProvenance] = Field(default=None, description="Structured provenance container")
 
 
 class EntityEvent(BaseModel):
@@ -236,3 +258,8 @@ class Alert(BaseModel):
     protocol: Optional[int] = Field(default=None, ge=0, le=255)
     summary: str = Field(..., description="Human-readable threat summary")
     evidence_count: int = Field(default=1, ge=0, description="Number of supporting evidence items")
+
+    # Phase 2C Provenance Extensions (Backwards-compatible)
+    detector_id: Optional[str] = Field(default=None, description="Identifying name of detector algorithm")
+    decision_reason: List[str] = Field(default_factory=list, description="Machine-readable trigger criteria")
+    observable_features: Dict[str, Any] = Field(default_factory=dict, description="Exact feature values used in decision")

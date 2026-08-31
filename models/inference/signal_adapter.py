@@ -86,6 +86,26 @@ class SignalAdapter:
                 "inference_latency_ms": ml_result.inference_latency_ms,
             }
 
+            # Build Phase 2C Provenance
+            from schemas import SignalProvenance
+            decision_reasons = [
+                f"ml_multiclass_prediction_{ml_result.predicted_class_name.lower()}",
+                "classification_confidence_threshold_met",
+            ]
+            observable_features = {
+                "top_probability": ml_result.confidence,
+                "model_name": ml_result.model_name,
+                "inference_latency_ms": ml_result.inference_latency_ms,
+            }
+            prov = SignalProvenance(
+                detector_id=ml_result.model_name or "LightGBMClassifier",
+                detector_version="1.0.0",
+                decision_reason=decision_reasons,
+                observable_features=observable_features,
+                window_start_iso=timestamp_iso,
+                window_end_iso=timestamp_iso,
+            )
+
             return DetectionSignal(
                 signal_id=sig_id,
                 threat_class=ml_result.threat_class,
@@ -96,6 +116,11 @@ class SignalAdapter:
                 target_entity=target_entity,
                 timestamp_iso=timestamp_iso,
                 indicators=indicators,
+                detector_id=ml_result.model_name or "LightGBMClassifier",
+                detector_version="1.0.0",
+                decision_reason=decision_reasons,
+                observable_features=observable_features,
+                provenance=prov,
             )
 
         # Handle UnifiedMLResult
@@ -106,6 +131,8 @@ class SignalAdapter:
             src = source_entity if source_entity else ml_result.source_entity
             tgt = target_entity if target_entity else ml_result.target_entity
             ts = timestamp_iso if timestamp_iso else ml_result.timestamp_iso
+
+            from schemas import SignalProvenance
 
             # Case A: Supervised model detected a known threat class (1..6)
             if clf.is_threat and clf.threat_class is not None:
@@ -124,6 +151,24 @@ class SignalAdapter:
                     "anomaly_model": anom.model_name,
                 }
 
+                decision_reasons = [
+                    f"ml_multiclass_prediction_{clf.predicted_class_name.lower()}",
+                    "classification_confidence_threshold_met",
+                ]
+                observable_features = {
+                    "top_probability": clf.confidence,
+                    "model_name": clf.model_name,
+                    "inference_latency_ms": clf.inference_latency_ms,
+                }
+                prov = SignalProvenance(
+                    detector_id=clf.model_name or "LightGBMClassifier",
+                    detector_version="1.0.0",
+                    decision_reason=decision_reasons,
+                    observable_features=observable_features,
+                    window_start_iso=ts,
+                    window_end_iso=ts,
+                )
+
                 return DetectionSignal(
                     signal_id=sig_id,
                     threat_class=clf.threat_class,
@@ -134,6 +179,11 @@ class SignalAdapter:
                     target_entity=tgt,
                     timestamp_iso=ts,
                     indicators=indicators,
+                    detector_id=clf.model_name or "LightGBMClassifier",
+                    detector_version="1.0.0",
+                    decision_reason=decision_reasons,
+                    observable_features=observable_features,
+                    provenance=prov,
                 )
 
             # Case B: Supervised model predicts BENIGN, but Isolation Forest flags ANOMALY
@@ -153,6 +203,24 @@ class SignalAdapter:
                     "note": anom.note,
                 }
 
+                decision_reasons = [
+                    "isolation_forest_negative_anomaly_score",
+                    "unsupervised_multivariate_outlier_detected",
+                ]
+                observable_features = {
+                    "anomaly_score": anom.anomaly_score,
+                    "anomaly_model": anom.model_name,
+                    "inference_latency_ms": anom.inference_latency_ms,
+                }
+                prov = SignalProvenance(
+                    detector_id=anom.model_name or "IsolationForestAnomaly",
+                    detector_version="1.0.0",
+                    decision_reason=decision_reasons,
+                    observable_features=observable_features,
+                    window_start_iso=ts,
+                    window_end_iso=ts,
+                )
+
                 return DetectionSignal(
                     signal_id=sig_id,
                     threat_class=ThreatClass.UNKNOWN_ANOMALY,
@@ -163,6 +231,11 @@ class SignalAdapter:
                     target_entity=tgt,
                     timestamp_iso=ts,
                     indicators=indicators,
+                    detector_id=anom.model_name or "IsolationForestAnomaly",
+                    detector_version="1.0.0",
+                    decision_reason=decision_reasons,
+                    observable_features=observable_features,
+                    provenance=prov,
                 )
 
             # Case C: Both classifier and anomaly detector predict BENIGN

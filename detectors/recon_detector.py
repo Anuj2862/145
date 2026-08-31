@@ -104,7 +104,7 @@ class ReconDetector:
         if not rf.sufficient_evidence:
             indicators["reason"] = f"Insufficient flows ({rf.flow_count} < {MIN_EVIDENCE_FLOWS})"
             return self._build_signal(
-                source_entity, 0.0, 0.1, Severity.INFO, indicators, timestamp_iso
+                rf, source_entity, 0.0, 0.1, Severity.INFO, indicators, timestamp_iso
             )
 
         # --- Component scores ---
@@ -140,11 +140,12 @@ class ReconDetector:
             severity = Severity.INFO
 
         return self._build_signal(
-            source_entity, score, confidence, severity, indicators, timestamp_iso
+            rf, source_entity, score, confidence, severity, indicators, timestamp_iso
         )
 
     def _build_signal(
         self,
+        rf: ReconFeatures,
         source_entity: str,
         score: float,
         confidence: float,
@@ -154,6 +155,34 @@ class ReconDetector:
     ) -> DetectionSignal:
         if "recon_suspicion_score" not in indicators:
             indicators["recon_suspicion_score"] = score
+
+        decision_reasons = []
+        if rf.unique_dst_port_count >= PORT_FAN_MIN:
+            decision_reasons.append("vertical_port_scan_fanout")
+        if rf.unique_dst_ip_count >= IP_FAN_MIN:
+            decision_reasons.append("horizontal_host_sweep_fanout")
+        if rf.connection_rate_per_sec and rf.connection_rate_per_sec >= RATE_MIN:
+            decision_reasons.append("elevated_connection_attempt_rate")
+        if rf.failed_connection_ratio and rf.failed_connection_ratio >= FAIL_RATIO_MIN:
+            decision_reasons.append("high_failed_connection_ratio")
+
+        observable_features = {
+            "unique_dst_ip_count": rf.unique_dst_ip_count,
+            "unique_dst_port_count": rf.unique_dst_port_count,
+            "connection_rate_per_sec": rf.connection_rate_per_sec,
+            "failed_connection_ratio": rf.failed_connection_ratio,
+            "flow_count": rf.flow_count,
+        }
+
+        from schemas import SignalProvenance
+        prov = SignalProvenance(
+            detector_id="ReconDetector",
+            detector_version="1.0.0",
+            decision_reason=decision_reasons,
+            observable_features=observable_features,
+            window_start_iso=timestamp_iso,
+            window_end_iso=timestamp_iso,
+        )
 
         return DetectionSignal(
             signal_id=f"sig-recon-{uuid.uuid4().hex[:8]}",
@@ -165,4 +194,9 @@ class ReconDetector:
             target_entity=None,
             timestamp_iso=timestamp_iso,
             indicators=indicators,
+            detector_id="ReconDetector",
+            detector_version="1.0.0",
+            decision_reason=decision_reasons,
+            observable_features=observable_features,
+            provenance=prov,
         )

@@ -109,14 +109,14 @@ class ExfiltrationDetector:
                 f"Insufficient flows ({ef.flow_count} < {MIN_EVIDENCE_FLOWS})"
             )
             return self._build_signal(
-                source_entity, 0.0, 0.0, Severity.INFO, indicators, timestamp_iso
+                ef, source_entity, 0.0, 0.0, Severity.INFO, indicators, timestamp_iso
             )
 
         # If no directional info, confidence is fundamentally limited
         if not ef.direction_available:
             indicators["reason"] = "Direction unavailable — entity_ip matched no flows"
             return self._build_signal(
-                source_entity, 0.0, 0.0, Severity.INFO, indicators, timestamp_iso
+                ef, source_entity, 0.0, 0.0, Severity.INFO, indicators, timestamp_iso
             )
 
         # --- Component scores ---
@@ -185,11 +185,12 @@ class ExfiltrationDetector:
             severity = Severity.INFO
 
         return self._build_signal(
-            source_entity, score, confidence, severity, indicators, timestamp_iso
+            ef, source_entity, score, confidence, severity, indicators, timestamp_iso
         )
 
     def _build_signal(
         self,
+        ef: ExfiltrationFeatures,
         source_entity: str,
         score: float,
         confidence: float,
@@ -199,6 +200,35 @@ class ExfiltrationDetector:
     ) -> DetectionSignal:
         if "exfil_suspicion_score" not in indicators:
             indicators["exfil_suspicion_score"] = score
+
+        decision_reasons = []
+        if ef.total_outbound_bytes >= VOL_MIN:
+            decision_reasons.append("high_outbound_byte_volume")
+        if ef.upload_download_ratio and ef.upload_download_ratio >= RATIO_MIN:
+            decision_reasons.append("high_upload_to_download_imbalance")
+        if ef.outbound_bytes_per_sec and ef.outbound_bytes_per_sec >= RATE_MIN:
+            decision_reasons.append("elevated_outbound_byte_rate")
+        if ef.large_transfer_count >= LARGE_CNT_MIN:
+            decision_reasons.append("large_transfer_frequency_observed")
+
+        observable_features = {
+            "total_outbound_bytes": ef.total_outbound_bytes,
+            "total_inbound_bytes": ef.total_inbound_bytes,
+            "upload_download_ratio": ef.upload_download_ratio,
+            "outbound_bytes_per_sec": ef.outbound_bytes_per_sec,
+            "maximum_single_flow_bytes": ef.maximum_single_flow_bytes,
+            "destination_count": ef.destination_count,
+        }
+
+        from schemas import SignalProvenance
+        prov = SignalProvenance(
+            detector_id="ExfiltrationDetector",
+            detector_version="1.0.0",
+            decision_reason=decision_reasons,
+            observable_features=observable_features,
+            window_start_iso=timestamp_iso,
+            window_end_iso=timestamp_iso,
+        )
 
         return DetectionSignal(
             signal_id=f"sig-exfil-{uuid.uuid4().hex[:8]}",
@@ -210,4 +240,9 @@ class ExfiltrationDetector:
             target_entity=None,
             timestamp_iso=timestamp_iso,
             indicators=indicators,
+            detector_id="ExfiltrationDetector",
+            detector_version="1.0.0",
+            decision_reason=decision_reasons,
+            observable_features=observable_features,
+            provenance=prov,
         )

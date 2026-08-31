@@ -142,6 +142,7 @@ class DNSAnomalyDetector:
                       severity: Severity, indicators: dict) -> DetectionSignal:
         signal_id = f"sig-dns-{uuid.uuid4().hex[:8]}"
         indicators["dns_suspicion_score"] = score
+        now_ts = datetime.now(timezone.utc).isoformat()
         
         target_entity = None
         if fv.flow_id:
@@ -149,6 +150,33 @@ class DNSAnomalyDetector:
                 target_entity = fv.flow_id.split("-")[1].split(":")[0]
             except Exception:
                 pass
+
+        decision_reasons = []
+        df = fv.dns_features
+        if df and df.entropy_mean is not None and df.entropy_mean >= self.ENTROPY_MIN_SUSPICIOUS:
+            decision_reasons.append("high_shannon_domain_entropy")
+        if df and df.query_length_mean is not None and df.query_length_mean >= self.LENGTH_MIN_SUSPICIOUS:
+            decision_reasons.append("elevated_dns_query_length")
+        if df and df.nxdomain_count >= self.NXDOMAIN_MIN_SUSPICIOUS:
+            decision_reasons.append("burst_nxdomain_responses")
+
+        observable_features = {
+            "entropy_mean": getattr(df, "entropy_mean", None) if df else None,
+            "query_length_mean": getattr(df, "query_length_mean", None) if df else None,
+            "nxdomain_count": getattr(df, "nxdomain_count", 0) if df else 0,
+            "txt_record_ratio": getattr(df, "txt_record_ratio", None) if df else None,
+            "subdomain_count": getattr(df, "subdomain_count", None) if df else None,
+        }
+
+        from schemas import SignalProvenance
+        prov = SignalProvenance(
+            detector_id="DNSAnomalyDetector",
+            detector_version="1.0.0",
+            decision_reason=decision_reasons,
+            observable_features=observable_features,
+            window_start_iso=fv.timestamp_iso,
+            window_end_iso=now_ts,
+        )
                 
         return DetectionSignal(
             signal_id=signal_id,
@@ -158,6 +186,11 @@ class DNSAnomalyDetector:
             severity=severity,
             source_entity=fv.entity_ip,
             target_entity=target_entity,
-            timestamp_iso=datetime.now(timezone.utc).isoformat(),
-            indicators=indicators
+            timestamp_iso=now_ts,
+            indicators=indicators,
+            detector_id="DNSAnomalyDetector",
+            detector_version="1.0.0",
+            decision_reason=decision_reasons,
+            observable_features=observable_features,
+            provenance=prov,
         )

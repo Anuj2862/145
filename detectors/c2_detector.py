@@ -84,6 +84,7 @@ class C2BeaconDetector:
                       severity: Severity, indicators: dict) -> DetectionSignal:
         signal_id = f"sig-c2-{uuid.uuid4().hex[:8]}"
         indicators["c2_suspicion_score"] = score
+        now_ts = datetime.now(timezone.utc).isoformat()
         
         target_entity = None
         if fv.flow_id:
@@ -91,6 +92,33 @@ class C2BeaconDetector:
                 target_entity = fv.flow_id.split("-")[1].split(":")[0]
             except Exception:
                 pass
+
+        decision_reasons = []
+        tf = fv.temporal_features
+        if tf and tf.periodicity_score is not None and tf.periodicity_score >= 0.8:
+            decision_reasons.append("high_temporal_periodicity_observed")
+        if tf and tf.jitter_pct is not None and tf.jitter_pct <= 15.0:
+            decision_reasons.append("low_inter_arrival_jitter_beacon")
+        if indicators.get("insufficient_observations_penalty"):
+            decision_reasons.append("insufficient_observations_penalty_applied")
+
+        observable_features = {
+            "periodicity_score": getattr(tf, "periodicity_score", None) if tf else None,
+            "jitter_pct": getattr(tf, "jitter_pct", None) if tf else None,
+            "inter_arrival_mean_ms": getattr(tf, "inter_arrival_mean_ms", None) if tf else None,
+            "inter_arrival_std_ms": getattr(tf, "inter_arrival_std_ms", None) if tf else None,
+            "observation_count": indicators.get("observation_count", 0),
+        }
+
+        from schemas import SignalProvenance
+        prov = SignalProvenance(
+            detector_id="C2BeaconDetector",
+            detector_version="1.0.0",
+            decision_reason=decision_reasons,
+            observable_features=observable_features,
+            window_start_iso=fv.timestamp_iso,
+            window_end_iso=now_ts,
+        )
                 
         return DetectionSignal(
             signal_id=signal_id,
@@ -100,6 +128,11 @@ class C2BeaconDetector:
             severity=severity,
             source_entity=fv.entity_ip,
             target_entity=target_entity,
-            timestamp_iso=datetime.now(timezone.utc).isoformat(),
-            indicators=indicators
+            timestamp_iso=now_ts,
+            indicators=indicators,
+            detector_id="C2BeaconDetector",
+            detector_version="1.0.0",
+            decision_reason=decision_reasons,
+            observable_features=observable_features,
+            provenance=prov,
         )

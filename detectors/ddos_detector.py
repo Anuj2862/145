@@ -47,10 +47,25 @@ class DDoSBaselineDetector:
             if syn_ratio > self.SYN_RATIO_CRITICAL:
                 score += 0.5
                 indicators["critical_syn_ratio"] = syn_ratio
+        # Determine specific decision reasons based on threshold triggers
+        decision_reasons = []
+        if pps > self.PPS_CRITICAL_THRESHOLD:
+            decision_reasons.append("critical_packet_velocity_exceeded")
+        elif pps > self.PPS_SUSPICIOUS_THRESHOLD:
+            decision_reasons.append("suspicious_packet_velocity_observed")
+
+        if syn_ratio is not None:
+            if syn_ratio > self.SYN_RATIO_CRITICAL:
+                decision_reasons.append("critical_tcp_syn_flood_ratio")
             elif syn_ratio > self.SYN_RATIO_SUSPICIOUS:
-                syn_score = 0.5 * ((syn_ratio - self.SYN_RATIO_SUSPICIOUS) / 
-                                  (self.SYN_RATIO_CRITICAL - self.SYN_RATIO_SUSPICIOUS))
-                score += syn_score
+                decision_reasons.append("elevated_tcp_syn_ratio")
+
+        observable_features = {
+            "packets_per_sec": pps,
+            "bytes_per_sec": fv.flow_features.bytes_per_sec,
+            "syn_ratio": syn_ratio,
+        }
+
         # Normalize score to [0.0, 1.0]
         confidence = min(max(score, 0.0), 1.0)
 
@@ -67,7 +82,18 @@ class DDoSBaselineDetector:
             severity = Severity.INFO
             
         signal_id = f"sig-ddos-{uuid.uuid4().hex[:8]}"
+        now_ts = datetime.now(timezone.utc).isoformat()
         
+        from schemas import SignalProvenance
+        prov = SignalProvenance(
+            detector_id="DDoSBaselineDetector",
+            detector_version="1.0.0",
+            decision_reason=decision_reasons,
+            observable_features=observable_features,
+            window_start_iso=fv.timestamp_iso,
+            window_end_iso=now_ts,
+        )
+
         return DetectionSignal(
             signal_id=signal_id,
             threat_class=ThreatClass.VOLUMETRIC_DDOS,
@@ -76,6 +102,11 @@ class DDoSBaselineDetector:
             severity=severity,
             source_entity=fv.entity_ip,
             target_entity=fv.flow_id.split("-")[1].split(":")[0] if fv.flow_id else None,
-            timestamp_iso=datetime.now(timezone.utc).isoformat(),
-            indicators=indicators
+            timestamp_iso=now_ts,
+            indicators=indicators,
+            detector_id="DDoSBaselineDetector",
+            detector_version="1.0.0",
+            decision_reason=decision_reasons,
+            observable_features=observable_features,
+            provenance=prov,
         )
