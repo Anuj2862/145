@@ -23,29 +23,33 @@ class ClassMetricResult:
     untested_reason: Optional[str] = None
 
     @property
-    def precision(self) -> float:
+    def support(self) -> int:
+        return self.true_positives + self.false_negatives
+
+    @property
+    def precision(self) -> Optional[float]:
         if not self.tested or (self.true_positives + self.false_positives) == 0:
-            return 0.0
+            return None
         return self.true_positives / (self.true_positives + self.false_positives)
 
     @property
-    def recall(self) -> float:
+    def recall(self) -> Optional[float]:
         if not self.tested or (self.true_positives + self.false_negatives) == 0:
-            return 0.0
+            return None
         return self.true_positives / (self.true_positives + self.false_negatives)
 
     @property
-    def f1_score(self) -> float:
+    def f1_score(self) -> Optional[float]:
         p = self.precision
         r = self.recall
-        if (p + r) == 0.0:
-            return 0.0
+        if p is None or r is None or (p + r) == 0.0:
+            return None
         return 2 * (p * r) / (p + r)
 
     @property
-    def false_positive_rate(self) -> float:
+    def false_positive_rate(self) -> Optional[float]:
         if not self.tested or (self.false_positives + self.true_negatives) == 0:
-            return 0.0
+            return None
         return self.false_positives / (self.false_positives + self.true_negatives)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -62,10 +66,11 @@ class ClassMetricResult:
             "false_positives": self.false_positives,
             "false_negatives": self.false_negatives,
             "true_negatives": self.true_negatives,
-            "precision": round(self.precision, 4),
-            "recall": round(self.recall, 4),
-            "f1_score": round(self.f1_score, 4),
-            "false_positive_rate": round(self.false_positive_rate, 4),
+            "support": self.support,
+            "precision": round(self.precision, 4) if self.precision is not None else "N/A",
+            "recall": round(self.recall, 4) if self.recall is not None else "N/A",
+            "f1_score": round(self.f1_score, 4) if self.f1_score is not None else "N/A",
+            "false_positive_rate": round(self.false_positive_rate, 4) if self.false_positive_rate is not None else "N/A",
         }
 
 
@@ -173,30 +178,33 @@ class MultiClassConfusionMatrix:
                 tested_precisions.append(res.precision)
                 tested_recalls.append(res.recall)
 
-        macro_f1 = statistics.mean(tested_f1_scores) if tested_f1_scores else 0.0
-        macro_prec = statistics.mean(tested_precisions) if tested_precisions else 0.0
-        macro_rec = statistics.mean(tested_recalls) if tested_recalls else 0.0
+        macro_f1 = round(statistics.mean(tested_f1_scores), 4) if tested_f1_scores else None
+        macro_prec = round(statistics.mean(tested_precisions), 4) if tested_precisions else None
+        macro_rec = round(statistics.mean(tested_recalls), 4) if tested_recalls else None
 
         # Latency statistics
-        median_lat = statistics.median(self.latencies_ms) if self.latencies_ms else 0.0
-        p95_lat = 0.0
+        median_lat = round(statistics.median(self.latencies_ms), 2) if self.latencies_ms else None
+        p95_lat = None
         if self.latencies_ms:
             sorted_lat = sorted(self.latencies_ms)
             p95_idx = int(len(sorted_lat) * 0.95)
-            p95_lat = sorted_lat[min(p95_idx, len(sorted_lat) - 1)]
+            p95_lat = round(sorted_lat[min(p95_idx, len(sorted_lat) - 1)], 2)
 
         # Benign FPR
         benign_res = self.get_class_metrics(EvaluationTrafficClass.BENIGN)
-        benign_fpr = benign_res.false_positive_rate if benign_res.tested else 0.0
+        benign_fpr = round(benign_res.false_positive_rate, 4) if (benign_res.tested and benign_res.false_positive_rate is not None) else None
+
+        total_decisions = sum(sum(row.values()) for row in self.matrix.values())
 
         return {
-            "macro_precision": round(macro_prec, 4),
-            "macro_recall": round(macro_rec, 4),
-            "macro_f1": round(macro_f1, 4),
-            "benign_false_positive_rate": round(benign_fpr, 4),
-            "latency_median_ms": round(median_lat, 2),
-            "latency_p95_ms": round(p95_lat, 2),
-            "total_evaluations": sum(sum(row.values()) for row in self.matrix.values()),
+            "evaluation_status": "COMPLETED" if total_decisions > 0 else "NO_CAPTURES_EVALUATED",
+            "macro_precision": macro_prec if macro_prec is not None else "N/A",
+            "macro_recall": macro_rec if macro_rec is not None else "N/A",
+            "macro_f1": macro_f1 if macro_f1 is not None else "N/A",
+            "benign_false_positive_rate": benign_fpr if benign_fpr is not None else "N/A",
+            "latency_median_ms": median_lat if median_lat is not None else "N/A",
+            "latency_p95_ms": p95_lat if p95_lat is not None else "N/A",
+            "total_evaluations": total_decisions,
             "per_class_breakdown": per_class,
             "raw_confusion_matrix": self.matrix,
         }

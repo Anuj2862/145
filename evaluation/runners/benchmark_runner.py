@@ -267,9 +267,14 @@ class BenchmarkRunner:
         perf = data["performance"]
         metrics = data["metrics"]
 
+        throughput_str = f"**{perf['sustained_throughput_pps']:,.1f} pps**" if perf["total_packets_processed"] > 0 else "*N/A (no packets evaluated)*"
+        median_lat_str = f"**{metrics['latency_median_ms']} ms**" if metrics["latency_median_ms"] != "N/A" else "*N/A (no decisions)*"
+        p95_lat_str = f"**{metrics['latency_p95_ms']} ms**" if metrics["latency_p95_ms"] != "N/A" else "*N/A (no decisions)*"
+
         lines = [
             f"# Empirical Benchmark Report: {data['experiment_id']}",
             "",
+            f"- **Status:** `{metrics.get('evaluation_status', 'COMPLETED')}`",
             f"- **Timestamp (UTC):** {data['timestamp_utc']}",
             f"- **Git Commit:** `{data['git_commit']}`",
             f"- **Manifest File:** `{data['manifest_file']}`",
@@ -282,33 +287,38 @@ class BenchmarkRunner:
             f"| **Total Packets Ingested** | {perf['total_packets_processed']:,} packets | — |",
             f"| **Total Flows Tracked** | {perf['total_flows_tracked']:,} flows | — |",
             f"| **Elapsed Time** | {perf['wall_clock_elapsed_sec']} s | — |",
-            f"| **Sustained Packet Throughput** | **{perf['sustained_throughput_pps']:,.1f} pps** | Engineering Target: >= 10,000 pps |",
-            f"| **Median Evaluation Latency (p50)** | **{metrics['latency_median_ms']} ms** | Sub-second Target |",
-            f"| **95th Percentile Latency (p95)** | **{metrics['latency_p95_ms']} ms** | Sub-second Target (< 1,000 ms) |",
+            f"| **Sustained Packet Throughput** | {throughput_str} | Engineering Target: >= 10,000 pps |",
+            f"| **Median Evaluation Latency (p50)** | {median_lat_str} | Sub-second Target |",
+            f"| **95th Percentile Latency (p95)** | {p95_lat_str} | Sub-second Target (< 1,000 ms) |",
             "",
             "## 2. Detection Accuracy & Macro Metrics",
             "",
             "| Metric | Score | Description |",
             "| :--- | :---: | :--- |",
-            f"| **Macro Precision** | **{metrics['macro_precision']:.4f}** | Unweighted mean precision across tested threat classes |",
-            f"| **Macro Recall** | **{metrics['macro_recall']:.4f}** | Unweighted mean sensitivity across tested threat classes |",
-            f"| **Macro F1-Score** | **{metrics['macro_f1']:.4f}** | Overall harmonic mean score |",
-            f"| **Benign False Positive Rate (FPR)** | **{metrics['benign_false_positive_rate']:.4f}** | Misclassification rate on benign traffic intervals |",
+            f"| **Macro Precision** | **{metrics['macro_precision']}** | Unweighted mean precision across tested threat classes |",
+            f"| **Macro Recall** | **{metrics['macro_recall']}** | Unweighted mean sensitivity across tested threat classes |",
+            f"| **Macro F1-Score** | **{metrics['macro_f1']}** | Overall harmonic mean score |",
+            f"| **Benign False Positive Rate (FPR)** | **{metrics['benign_false_positive_rate']}** | Misclassification rate on benign traffic intervals |",
             f"| **Total Temporal Decisions** | {metrics['total_evaluations']:,} | Total window evaluation passes |",
             "",
             "## 3. Per-Class Scorecard Breakdown",
             "",
-            "| Traffic Class | Status | TP | FP | FN | Precision | Recall | F1 Score |",
-            "| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |",
+            "| Traffic Class | Status | TP | FP | FN | TN | Support | Precision | Recall | F1 Score |",
+            "| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |",
         ]
 
         for cls_name, cls_data in metrics["per_class_breakdown"].items():
             if cls_data.get("status") == "NOT_TESTED":
-                lines.append(f"| `{cls_name}` | ⚪ *NOT TESTED* | — | — | — | — | — | {cls_data.get('reason', '')} |")
+                lines.append(f"| `{cls_name}` | ⚪ *NOT TESTED* | — | — | — | — | — | — | — | *{cls_data.get('reason', '')}* |")
             else:
+                p_str = f"{cls_data['precision']:.4f}" if isinstance(cls_data['precision'], (int, float)) else str(cls_data['precision'])
+                r_str = f"{cls_data['recall']:.4f}" if isinstance(cls_data['recall'], (int, float)) else str(cls_data['recall'])
+                f_str = f"**{cls_data['f1_score']:.4f}**" if isinstance(cls_data['f1_score'], (int, float)) else str(cls_data['f1_score'])
+
                 lines.append(
                     f"| `{cls_name}` | 🟢 TESTED | {cls_data['true_positives']} | {cls_data['false_positives']} | "
-                    f"{cls_data['false_negatives']} | {cls_data['precision']:.4f} | {cls_data['recall']:.4f} | **{cls_data['f1_score']:.4f}** |"
+                    f"{cls_data['false_negatives']} | {cls_data['true_negatives']} | {cls_data.get('support', 0)} | "
+                    f"{p_str} | {r_str} | {f_str} |"
                 )
 
         lines.extend([

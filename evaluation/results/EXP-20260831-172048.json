@@ -1,0 +1,170 @@
+{
+  "experiment_id": "EXP-20260831-172048",
+  "timestamp_utc": "2026-08-31T17:20:48.778208+00:00",
+  "git_commit": "7696b4b6c97d335a1db600bd26630f4d614f9e5f",
+  "manifest_file": "dataset/manifests/ground_truth.json",
+  "pipeline_config": {
+    "enable_ml": true,
+    "enable_baseline": true,
+    "artifact_dir": "models/artifacts"
+  },
+  "performance": {
+    "total_packets_processed": 0,
+    "total_flows_tracked": 0,
+    "wall_clock_elapsed_sec": 0.001,
+    "sustained_throughput_pps": 0.0,
+    "sustained_throughput_fps": 0.0
+  },
+  "metrics": {
+    "evaluation_status": "NO_CAPTURES_EVALUATED",
+    "macro_precision": "N/A",
+    "macro_recall": "N/A",
+    "macro_f1": "N/A",
+    "benign_false_positive_rate": "N/A",
+    "latency_median_ms": "N/A",
+    "latency_p95_ms": "N/A",
+    "total_evaluations": 0,
+    "per_class_breakdown": {
+      "BENIGN": {
+        "traffic_class": "BENIGN",
+        "status": "NOT_TESTED",
+        "reason": "PCAP file missing on disk: dataset/pcaps/benign/corp_workstation_baseline_01.pcap"
+      },
+      "VOLUMETRIC_DDOS": {
+        "traffic_class": "VOLUMETRIC_DDOS",
+        "status": "NOT_TESTED",
+        "reason": "PCAP file missing on disk: dataset/pcaps/ddos/syn_flood_15kpps_burst.pcap"
+      },
+      "BOTNET_C2_BEACONING": {
+        "traffic_class": "BOTNET_C2_BEACONING",
+        "status": "NOT_TESTED",
+        "reason": "PCAP file missing on disk: dataset/pcaps/c2/c2_periodic_beacon_60s_jitter5.pcap"
+      },
+      "DGA_DNS_TUNNELLING": {
+        "traffic_class": "DGA_DNS_TUNNELLING",
+        "status": "NOT_TESTED",
+        "reason": "Zero instances observed in evaluated captures"
+      },
+      "ENCRYPTED_MALWARE": {
+        "traffic_class": "ENCRYPTED_MALWARE",
+        "status": "NOT_TESTED",
+        "reason": "Zero instances observed in evaluated captures"
+      },
+      "RECON_PORT_SCAN": {
+        "traffic_class": "RECON_PORT_SCAN",
+        "status": "NOT_TESTED",
+        "reason": "Zero instances observed in evaluated captures"
+      },
+      "DATA_EXFILTRATION": {
+        "traffic_class": "DATA_EXFILTRATION",
+        "status": "NOT_TESTED",
+        "reason": "Zero instances observed in evaluated captures"
+      },
+      "UNKNOWN_ANOMALY": {
+        "traffic_class": "UNKNOWN_ANOMALY",
+        "status": "NOT_TESTED",
+        "reason": "Zero instances observed in evaluated captures"
+      }
+    },
+    "raw_confusion_matrix": {
+      "BENIGN": {
+        "BENIGN": 0,
+        "VOLUMETRIC_DDOS": 0,
+        "BOTNET_C2_BEACONING": 0,
+        "DGA_DNS_TUNNELLING": 0,
+        "ENCRYPTED_MALWARE": 0,
+        "RECON_PORT_SCAN": 0,
+        "DATA_EXFILTRATION": 0,
+        "UNKNOWN_ANOMALY": 0
+      },
+      "VOLUMETRIC_DDOS": {
+        "BENIGN": 0,
+        "VOLUMETRIC_DDOS": 0,
+        "BOTNET_C2_BEACONING": 0,
+        "DGA_DNS_TUNNELLING": 0,
+        "ENCRYPTED_MALWARE": 0,
+        "RECON_PORT_SCAN": 0,
+        "DATA_EXFILTRATION": 0,
+        "UNKNOWN_ANOMALY": 0
+      },
+      "BOTNET_C2_BEACONING": {
+        "BENIGN": 0,
+        "VOLUMETRIC_DDOS": 0,
+        "BOTNET_C2_BEACONING": 0,
+        "DGA_DNS_TUNNELLING": 0,
+        "ENCRYPTED_MALWARE": 0,
+        "RECON_PORT_SCAN": 0,
+        "DATA_EXFILTRATION": 0,
+        "UNKNOWN_ANOMALY": 0
+      },
+      "DGA_DNS_TUNNELLING": {
+        "BENIGN": 0,
+        "VOLUMETRIC_DDOS": 0,
+        "BOTNET_C2_BEACONING": 0,
+        "DGA_DNS_TUNNELLING": 0,
+        "ENCRYPTED_MALWARE": 0,
+        "RECON_PORT_SCAN": 0,
+        "DATA_EXFILTRATION": 0,
+        "UNKNOWN_ANOMALY": 0
+      },
+      "ENCRYPTED_MALWARE": {
+        "BENIGN": 0,
+        "VOLUMETRIC_DDOS": 0,
+        "BOTNET_C2_BEACONING": 0,
+        "DGA_DNS_TUNNELLING": 0,
+        "ENCRYPTED_MALWARE": 0,
+        "RECON_PORT_SCAN": 0,
+        "DATA_EXFILTRATION": 0,
+        "UNKNOWN_ANOMALY": 0
+      },
+      "RECON_PORT_SCAN": {
+        "BENIGN": 0,
+        "VOLUMETRIC_DDOS": 0,
+        "BOTNET_C2_BEACONING": 0,
+        "DGA_DNS_TUNNELLING": 0,
+        "ENCRYPTED_MALWARE": 0,
+        "RECON_PORT_SCAN": 0,
+        "DATA_EXFILTRATION": 0,
+        "UNKNOWN_ANOMALY": 0
+      },
+      "DATA_EXFILTRATION": {
+        "BENIGN": 0,
+        "VOLUMETRIC_DDOS": 0,
+        "BOTNET_C2_BEACONING": 0,
+        "DGA_DNS_TUNNELLING": 0,
+        "ENCRYPTED_MALWARE": 0,
+        "RECON_PORT_SCAN": 0,
+        "DATA_EXFILTRATION": 0,
+        "UNKNOWN_ANOMALY": 0
+      },
+      "UNKNOWN_ANOMALY": {
+        "BENIGN": 0,
+        "VOLUMETRIC_DDOS": 0,
+        "BOTNET_C2_BEACONING": 0,
+        "DGA_DNS_TUNNELLING": 0,
+        "ENCRYPTED_MALWARE": 0,
+        "RECON_PORT_SCAN": 0,
+        "DATA_EXFILTRATION": 0,
+        "UNKNOWN_ANOMALY": 0
+      }
+    }
+  },
+  "evaluated_captures": [],
+  "untested_captures": [
+    {
+      "capture_id": "CAP-BENIGN-CORP-001",
+      "file_path": "dataset/pcaps/benign/corp_workstation_baseline_01.pcap",
+      "reason": "File does not exist on disk"
+    },
+    {
+      "capture_id": "CAP-DDOS-SYN-001",
+      "file_path": "dataset/pcaps/ddos/syn_flood_15kpps_burst.pcap",
+      "reason": "File does not exist on disk"
+    },
+    {
+      "capture_id": "CAP-C2-BEACON-001",
+      "file_path": "dataset/pcaps/c2/c2_periodic_beacon_60s_jitter5.pcap",
+      "reason": "File does not exist on disk"
+    }
+  ]
+}
