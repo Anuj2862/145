@@ -24,7 +24,7 @@
         </div>
         <div class="subtitle-row">
           <span class="enclave-tag">PASSIVE UNIDIRECTIONAL IP TRAFFIC ENCLAVE</span>
-          <span class="diode-stat">⚡ DIODE RX ACTIVE &bull; NO RETURN PATH</span>
+          <span class="diode-stat">⚡ DIODE RX ACTIVE &bull; NO RETURN PATH &bull; ZERO DECRYPTION</span>
         </div>
       </div>
     </div>
@@ -32,18 +32,18 @@
     <!-- Center: Interactive Quick Attack Simulator Buttons -->
     <div class="attack-sim-bar">
       <span class="sim-label">⚡ ATTACK INJECTOR:</span>
-      <button class="sim-btn ddos" onclick="injectAttack('VOLUMETRIC_DDOS')">⚡ DDoS Flood</button>
-      <button class="sim-btn c2" onclick="injectAttack('BOTNET_C2_BEACONING')">📡 C2 Beacon</button>
-      <button class="sim-btn dns" onclick="injectAttack('DGA_DNS_TUNNELLING')">🧬 DGA / DNS</button>
-      <button class="sim-btn exfil" onclick="injectAttack('DATA_EXFILTRATION')">🔐 Exfil</button>
-      <button class="sim-btn recon" onclick="injectAttack('RECON_PORT_SCAN')">🔍 Recon</button>
+      <button class="sim-btn ddos" onclick="injectAttack('VOLUMETRIC_DDOS')" title="Inject Volumetric DDoS Flood">⚡ DDoS</button>
+      <button class="sim-btn c2" onclick="injectAttack('BOTNET_C2_BEACONING')" title="Inject Periodic C2 Beacon">📡 C2 Beacon</button>
+      <button class="sim-btn dns" onclick="injectAttack('DGA_DNS_TUNNELLING')" title="Inject DGA DNS Query Burst">🧬 DGA / DNS</button>
+      <button class="sim-btn exfil" onclick="injectAttack('DATA_EXFILTRATION')" title="Inject Bulk Data Exfiltration">🔐 Exfil</button>
+      <button class="sim-btn recon" onclick="injectAttack('RECON_PORT_SCAN')" title="Inject Network Port Sweep">🔍 Recon</button>
       <button class="sim-btn auto-stream" id="btnToggleSim" onclick="toggleContinuousStream()">▶️ LIVE STREAM</button>
     </div>
 
     <div class="nav-right">
-      <div class="live-pill active">
+      <div class="live-pill active" id="livePill">
         <span class="blinking-dot"></span>
-        <span>STREAMING 10 Gbps</span>
+        <span id="liveStatusText">LIVE STREAMING 10 Gbps</span>
       </div>
       <div class="mute-toggle" id="btnAudioToggle" onclick="toggleAudio()" title="Toggle Alert Chime">
         🔔 SOUND ON
@@ -53,12 +53,11 @@
 
   <!-- Main Container -->
   <main class="soc-layout">
-    <!-- Top Row: Animated Metric Telemetry Cards -->
+    <!-- Top Row: Calmer, High-Readability Metric KPI Cards -->
     <section class="telemetry-deck">
       <div class="telemetry-card card-cyan">
-        <div class="card-glow"></div>
         <div class="card-top">
-          <span class="card-label">PASSIVE PACKETS INGESTED</span>
+          <span class="card-label">PACKETS INGESTED</span>
           <span class="card-icon">📦</span>
         </div>
         <div class="card-big-stat" id="statPackets">0</div>
@@ -69,21 +68,19 @@
       </div>
 
       <div class="telemetry-card card-blue">
-        <div class="card-glow"></div>
         <div class="card-top">
           <span class="card-label">ACTIVE 5-TUPLE FLOWS</span>
           <span class="card-icon">🔄</span>
         </div>
         <div class="card-big-stat" id="statFlows">0</div>
         <div class="card-bottom">
-          <span class="sub-caption">5s Sliding Burst &bull; 30s Baseline</span>
+          <span class="sub-caption">5s Burst &bull; 30s Window &bull; 300s Fusion</span>
         </div>
       </div>
 
       <div class="telemetry-card card-amber">
-        <div class="card-glow"></div>
         <div class="card-top">
-          <span class="card-label">M2 DETECTION SIGNALS</span>
+          <span class="card-label">DETECTION SIGNALS</span>
           <span class="card-icon">⚠️</span>
         </div>
         <div class="card-big-stat" id="statSignals">0</div>
@@ -93,26 +90,82 @@
       </div>
 
       <div class="telemetry-card card-crimson">
-        <div class="card-glow"></div>
         <div class="card-top">
           <span class="card-label">CORRELATED INCIDENTS</span>
           <span class="card-icon">🚨</span>
         </div>
         <div class="card-big-stat" id="statIncidents">0</div>
         <div class="card-bottom">
-          <span class="danger-badge">Fused Risk Score &ge; 80%</span>
+          <span class="danger-badge">Risk &ge; 70% Correlated</span>
         </div>
       </div>
 
       <div class="telemetry-card card-purple">
-        <div class="card-glow"></div>
         <div class="card-top">
-          <span class="card-label">TRACKED ENTITY PROFILES</span>
+          <span class="card-label">TRACKED ENTITIES</span>
           <span class="card-icon">🖥️</span>
         </div>
         <div class="card-big-stat" id="statEntities">0</div>
         <div class="card-bottom">
-          <span class="sub-caption">Rolling Z-Score Baselines</span>
+          <span class="sub-caption">Rolling 1-Hr Welford Baselines</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEW: Horizontal Attack Lifecycle Progression Story Banner -->
+    <section class="glass-box lifecycle-banner" id="lifecycleBanner">
+      <div class="lifecycle-head">
+        <div class="head-left">
+          <span class="lifecycle-icon">🎯</span>
+          <div class="lifecycle-title-group">
+            <h3>MULTI-STAGE ATTACK LIFECYCLE RECONSTRUCTION</h3>
+            <span class="lifecycle-subtitle" id="focusEntitySubtitle">SELECT AN ENTITY BELOW OR INJECT AN ATTACK TO TRACE THE KILL-CHAIN</span>
+          </div>
+        </div>
+        <div class="lifecycle-actions">
+          <span class="fused-risk-badge" id="focusRiskBadge">COMPOSITE RISK: NORMAL (0%)</span>
+          <button class="reset-btn" id="btnResetFocus" onclick="resetEntityFocus()">↺ RESET VIEW</button>
+        </div>
+      </div>
+
+      <div class="lifecycle-timeline">
+        <div class="stage-node" id="stageRecon">
+          <div class="stage-dot">1</div>
+          <div class="stage-info">
+            <span class="stage-name">RECONNAISSANCE</span>
+            <span class="stage-detail" id="stageReconDetail">Port Sweep &bull; Failed Ratios</span>
+          </div>
+          <span class="stage-status-pill" id="stageReconPill">INACTIVE</span>
+        </div>
+        <div class="timeline-connector" id="connReconDns"></div>
+
+        <div class="stage-node" id="stageDns">
+          <div class="stage-dot">2</div>
+          <div class="stage-info">
+            <span class="stage-name">DGA / DNS COMMAND</span>
+            <span class="stage-detail" id="stageDnsDetail">High Shannon Entropy ($H \ge 3.8$)</span>
+          </div>
+          <span class="stage-status-pill" id="stageDnsPill">INACTIVE</span>
+        </div>
+        <div class="timeline-connector" id="connDnsC2"></div>
+
+        <div class="stage-node" id="stageC2">
+          <div class="stage-dot">3</div>
+          <div class="stage-info">
+            <span class="stage-name">PERIODIC C2 BEACON</span>
+            <span class="stage-detail" id="stageC2Detail">Microsecond IAT &bull; Low Jitter</span>
+          </div>
+          <span class="stage-status-pill" id="stageC2Pill">INACTIVE</span>
+        </div>
+        <div class="timeline-connector" id="connC2Exfil"></div>
+
+        <div class="stage-node" id="stageExfil">
+          <div class="stage-dot">4</div>
+          <div class="stage-info">
+            <span class="stage-name">DATA EXFILTRATION</span>
+            <span class="stage-detail" id="stageExfilDetail">Asymmetric Upload Rate &bull; Volume</span>
+          </div>
+          <span class="stage-status-pill" id="stageExfilPill">INACTIVE</span>
         </div>
       </div>
     </section>
@@ -124,9 +177,13 @@
         <div class="panel-head">
           <div class="head-title">
             <span class="panel-icon">📈</span>
-            <h2>Passive Ingress Flow Telemetry</h2>
+            <h2>Flow Telemetry Oscilloscope</h2>
           </div>
-          <span class="live-indicator">LIVE OSCILLOSCOPE</span>
+          <div class="telemetry-tabs">
+            <button class="ttab active" id="tabPps" onclick="switchTelemetryTab('pps')">PPS</button>
+            <button class="ttab" id="tabBps" onclick="switchTelemetryTab('bps')">Mbps</button>
+            <button class="ttab" id="tabRisk" onclick="switchTelemetryTab('risk')">Risk</button>
+          </div>
         </div>
         <div class="chart-box">
           <canvas id="trafficCanvas"></canvas>
@@ -137,7 +194,7 @@
             <span class="cval" id="chartBps">24.8 Mbps</span>
           </div>
           <div class="cstat">
-            <span class="clabel">ENCRYPTED / TLS RATIO</span>
+            <span class="clabel">PASSIVE TLS RATIO</span>
             <span class="cval" style="color:#a78bfa;">78.4% (JA3/JA4)</span>
           </div>
           <div class="cstat">
@@ -154,16 +211,19 @@
             <span class="panel-icon">🕸️</span>
             <h2>Entity Behaviour Graph</h2>
           </div>
-          <div class="graph-legend-inline">
-            <span class="gitem"><span class="gdot dot-host"></span> Host IP</span>
-            <span class="gitem"><span class="gdot dot-target"></span> Target IP</span>
-            <span class="gitem"><span class="gdot dot-sig"></span> Signal</span>
-            <span class="gitem"><span class="gdot dot-inc"></span> Incident</span>
+          <div class="graph-controls-inline">
+            <div class="graph-legend-inline">
+              <span class="gitem"><span class="gdot dot-host"></span> Host IP</span>
+              <span class="gitem"><span class="gdot dot-target"></span> Target IP</span>
+              <span class="gitem"><span class="gdot dot-sig"></span> Signal</span>
+              <span class="gitem"><span class="gdot dot-inc"></span> Incident</span>
+            </div>
+            <button class="graph-mini-btn" onclick="focusSampleAttackChain()" title="Focus 4-Stage APT Chain">🎯 Focus Attack</button>
           </div>
         </div>
         <div class="graph-canvas-wrap" id="graphWrap">
           <canvas id="graphCanvas"></canvas>
-          <div class="graph-watermark">DIRECTED TEMPORAL GRAPH &bull; REAL-TIME PROPAGATION</div>
+          <div class="graph-watermark">DIRECTED TEMPORAL GRAPH &bull; CLICK ANY NODE TO FOCUS ATTACK CHAIN</div>
         </div>
       </section>
 
@@ -183,39 +243,28 @@
             <option value="DATA_EXFILTRATION">Exfil Only</option>
           </select>
         </div>
+        <div class="feed-live-indicator-bar">
+          <span class="live-tag"><span class="dot-pulse"></span> LIVE FEED</span>
+          <span class="feed-timing" id="feedLastEvent">Last event: 120ms ago</span>
+        </div>
         <div class="feed-scroll" id="feedScroll">
           <!-- Dynamically populated -->
         </div>
       </section>
     </div>
 
-    <!-- Bottom Row: Incidents Dossier Table & MITRE Stages -->
+    <!-- Bottom Row: Incidents Dossier Deck & MITRE Stages -->
     <section class="glass-box incidents-deck">
       <div class="panel-head">
         <div class="head-title">
           <span class="panel-icon">🛡️</span>
-          <h2>Correlated Incident Dossiers & Multi-Stage Attack Chains</h2>
+          <h2>Correlated Incident Dossiers & Multi-Stage Kill Chains</h2>
         </div>
-        <span class="cyber-tag">EVIDENCE-BACKED NO PAYLOAD DECRYPTION</span>
+        <span class="cyber-tag">EVIDENCE-BACKED &bull; ZERO PAYLOAD DECRYPTION</span>
       </div>
 
-      <div class="table-container">
-        <table class="cyber-table">
-          <thead>
-            <tr>
-              <th>Incident ID</th>
-              <th>Primary Entity</th>
-              <th>Fused Risk</th>
-              <th>Severity</th>
-              <th>Attack Lifecycle Stages</th>
-              <th>Observable Explainable Evidence</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="incidentsBody">
-            <!-- Dynamic rows -->
-          </tbody>
-        </table>
+      <div class="incident-cards-container" id="incidentsContainer">
+        <!-- Dynamically rendered incident investigation cards -->
       </div>
     </section>
   </main>
