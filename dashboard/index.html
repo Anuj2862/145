@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unidirectional Threat Intelligence Dashboard | PS 26145</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body class="dark-theme">
+  <!-- Top Navigation Header -->
+  <header class="navbar">
+    <div class="nav-brand">
+      <div class="logo-shield">🛡️</div>
+      <div class="brand-text">
+        <h1>UNIDIRECTIONAL THREAT INTELLIGENCE</h1>
+        <span class="sub-title">NTRO PS 26145 &bull; Air-Gapped / Diode Isolated Enclave</span>
+      </div>
+    </div>
+    <div class="nav-status">
+      <div class="status-pill diode-pill">
+        <span class="status-dot green"></span>
+        <span class="pill-label">ONE-WAY TAP: PASSIVE INGEST</span>
+      </div>
+      <div class="status-pill api-pill" id="apiStatusPill">
+        <span class="status-dot green"></span>
+        <span class="pill-label">SYSTEM ONLINE</span>
+      </div>
+      <button class="btn btn-primary" id="btnReplayModal">⚡ Replay PCAP</button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="dashboard-grid">
+    <!-- Row 1: KPI Stat Cards -->
+    <section class="kpi-grid">
+      <div class="kpi-card glass-panel">
+        <div class="kpi-header">
+          <span class="kpi-title">Ingested Packets</span>
+          <span class="kpi-icon">📦</span>
+        </div>
+        <div class="kpi-value" id="kpiPackets">0</div>
+        <div class="kpi-footer">
+          <span class="badge" id="kpiPps">0.0 pps</span>
+          <span class="text-muted">Zero Return-Path</span>
+        </div>
+      </div>
+
+      <div class="kpi-card glass-panel">
+        <div class="kpi-header">
+          <span class="kpi-title">Active 5-Tuple Flows</span>
+          <span class="kpi-icon">🔄</span>
+        </div>
+        <div class="kpi-value" id="kpiFlows">0</div>
+        <div class="kpi-footer">
+          <span class="text-muted">5s Burst &bull; 30s Session</span>
+        </div>
+      </div>
+
+      <div class="kpi-card glass-panel">
+        <div class="kpi-header">
+          <span class="kpi-title">Detection Signals</span>
+          <span class="kpi-icon">⚠️</span>
+        </div>
+        <div class="kpi-value warning-text" id="kpiSignals">0</div>
+        <div class="kpi-footer">
+          <span class="badge badge-warning">Heuristic + LightGBM</span>
+        </div>
+      </div>
+
+      <div class="kpi-card glass-panel">
+        <div class="kpi-header">
+          <span class="kpi-title">Correlated Incidents</span>
+          <span class="kpi-icon">🚨</span>
+        </div>
+        <div class="kpi-value danger-text" id="kpiIncidents">0</div>
+        <div class="kpi-footer">
+          <span class="badge badge-danger">Multi-Signal Fused</span>
+        </div>
+      </div>
+
+      <div class="kpi-card glass-panel">
+        <div class="kpi-header">
+          <span class="kpi-title">Tracked Entities</span>
+          <span class="kpi-icon">🖥️</span>
+        </div>
+        <div class="kpi-value" id="kpiEntities">0</div>
+        <div class="kpi-footer">
+          <span class="text-muted">Rolling Baseline History</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Row 2: Live Alert Feed & Entity Graph -->
+    <div class="content-row">
+      <!-- Left: Live Alert Feed -->
+      <section class="panel glass-panel alert-section">
+        <div class="panel-header">
+          <div class="panel-title-wrap">
+            <h2>Live Alert Stream</h2>
+            <span class="live-tag">● REAL-TIME</span>
+          </div>
+          <div class="filter-wrap">
+            <select id="filterThreatClass" class="select-input">
+              <option value="ALL">All Threat Classes</option>
+              <option value="VOLUMETRIC_DDOS">Volumetric DDoS</option>
+              <option value="BOTNET_C2_BEACONING">Botnet C2 Beaconing</option>
+              <option value="DGA_DNS_TUNNELLING">DGA / DNS Tunnelling</option>
+              <option value="ENCRYPTED_MALWARE">Encrypted Threat</option>
+              <option value="RECON_PORT_SCAN">Port Scan / Recon</option>
+              <option value="DATA_EXFILTRATION">Data Exfiltration</option>
+              <option value="UNKNOWN_ANOMALY">Unknown Anomaly</option>
+            </select>
+          </div>
+        </div>
+        <div class="alert-list" id="alertList">
+          <div class="empty-state">Waiting for streaming traffic signals...</div>
+        </div>
+      </section>
+
+      <!-- Right: Entity Behaviour Graph & Incident Timeline -->
+      <section class="panel glass-panel graph-section">
+        <div class="panel-header">
+          <h2>Entity Behaviour Graph</h2>
+          <div class="graph-legend">
+            <span class="legend-item"><span class="dot host-dot"></span> Host IP</span>
+            <span class="legend-item"><span class="dot signal-dot"></span> Signal</span>
+            <span class="legend-item"><span class="dot incident-dot"></span> Incident</span>
+          </div>
+        </div>
+        <div class="graph-container" id="graphContainer">
+          <canvas id="graphCanvas"></canvas>
+        </div>
+      </section>
+    </div>
+
+    <!-- Row 3: Incidents & Explainable Evidence Table -->
+    <section class="panel glass-panel incident-table-section">
+      <div class="panel-header">
+        <h2>Multi-Stage Correlated Incidents & Evidence Dossiers</h2>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Incident ID</th>
+              <th>Primary Entity</th>
+              <th>Risk Score</th>
+              <th>Overall Severity</th>
+              <th>Attack Stages</th>
+              <th>Key Supporting Evidence</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="incidentTableBody">
+            <tr>
+              <td colspan="7" class="text-center text-muted">No correlated incidents created yet.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Incident Details Modal -->
+  <div class="modal-overlay" id="incidentModal">
+    <div class="modal-content glass-panel">
+      <div class="modal-header">
+        <h3 id="modalIncidentTitle">Incident Dossier</h3>
+        <button class="modal-close" id="btnModalClose">&times;</button>
+      </div>
+      <div class="modal-body" id="modalIncidentBody">
+        <!-- Injected via JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
