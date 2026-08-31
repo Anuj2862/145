@@ -105,6 +105,7 @@ def replay_pcap(
     window_manager: StreamingWindowManager | None = None,
     event_callback: Callable[[FlowEvent], None] | None = None,
     window_snapshot_callback: Callable[[WindowSnapshotEvent], None] | None = None,
+    signal_adapter_callback: Callable[[list[FlowEvent], float, float], None] | None = None,
     output: TextIO | None = None,
     packet_source: Iterable[NormalizedPacket] | None = None,
     queue_capacity: int = DEFAULT_QUEUE_CAPACITY,
@@ -131,6 +132,7 @@ def replay_pcap(
     window_snapshots_emitted = 0
     peak_active_flows = flow_manager.active_flow_count()
     emitted_flow_ids: set[str] = set()
+    emitted_flow_objects: list[FlowEvent] = []
     seen_flow_ids: set[str] = set()
     latest_capture_timestamp: float | None = None
     latest_processing_wall_timestamp: float | None = None
@@ -223,19 +225,24 @@ def replay_pcap(
                     record_emission_latency(processing_started)
 
                 if (
-                    event_callback is not None
-                    and flow_id not in emitted_flow_ids
+                    flow_id not in emitted_flow_ids
                     and features.packet_count
                     >= FLOW_EVENT_PACKET_THRESHOLD
-                ):
-                    event_callback(
-                        _flow_event_from_features(
-                            timestamp=packet.timestamp,
-                            flow_id=flow_id,
-                            key=key,
-                            features=features,
-                        )
+                    and (
+                        event_callback is not None
+                        or signal_adapter_callback is not None
                     )
+                ):
+                    flow_evt = _flow_event_from_features(
+                        timestamp=packet.timestamp,
+                        flow_id=flow_id,
+                        key=key,
+                        features=features,
+                    )
+                    if event_callback is not None:
+                        event_callback(flow_evt)
+                    if signal_adapter_callback is not None:
+                        emitted_flow_objects.append(flow_evt)
                     emitted_flow_ids.add(flow_id)
                     flow_events_emitted += 1
                     record_emission_latency(processing_started)
@@ -302,6 +309,15 @@ def replay_pcap(
         drain_queue()
 
     drain_queue()
+
+    if signal_adapter_callback is not None and emitted_flow_objects:
+        w_start = emitted_flow_objects[0].timestamp
+        w_end = (
+            latest_capture_timestamp
+            if (latest_capture_timestamp is not None and latest_capture_timestamp > w_start)
+            else w_start + 1.0
+        )
+        signal_adapter_callback(emitted_flow_objects, w_start, w_end)
 
     elapsed_seconds = round(
         max(0.0, monotonic_fn() - started_at),

@@ -1,27 +1,31 @@
-# Python Bytecode & Cache
+# Python cache and build outputs
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 *.pyo
 
-# Environments & Virtualenvs
+# Virtual environments
 .venv/
 env/
 venv/
 ENV/
 
-# Testing & Tooling
+# Test / tooling / coverage
 .pytest_cache/
 .mypy_cache/
 .coverage
 htmlcov/
 
-# IDEs & System
-.DS_Store
-Thumbs.db
-.idea/
-.vscode/
+# Model artifacts and binary models
+models/artifacts/*
+!models/artifacts/.gitkeep
+*.joblib
+*.pkl
+
+# Processed dataset exports
+dataset/processed/*.csv
+!dataset/processed/.gitkeep
 
 # PCAP captures & Large Files
 *.pcap
@@ -29,3 +33,9 @@ Thumbs.db
 
 # Logs
 *.log
+
+# IDE and OS settings
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
