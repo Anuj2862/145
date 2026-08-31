@@ -37,6 +37,8 @@ from schemas import (
     TLSFeatures,
     Severity,
     ThreatClass,
+    DetectorType,
+    DetectionSignal,
 )
 from fusion.engine import MultiSignalFusionEngine
 from entity.memory import EntityMemory
@@ -226,14 +228,46 @@ def run_live_pipeline_demonstration(
                         f"Detector: {prov.detector_id if prov else 'N/A'}"
                     )
 
-    # Post alerts to live SOC backend if available
+    # Run Stage 2: Multi-Stage Attack Demonstration
+    print("\n" + "=" * 70)
+    print(" MULTI-STAGE ATTACK CORRELATION SCENARIO (HOST: 10.0.15.99)")
+    print("=" * 70)
+    print("Simulating APT kill-chain: Recon -> DGA DNS -> Encrypted C2 -> Exfiltration")
+
+    apt_host = "10.0.15.99"
+    apt_stages = [
+        ("STAGE 1: RECONNAISSANCE", ThreatClass.RECON_PORT_SCAN, DetectorType.DETERMINISTIC_BASELINE, "ReconDetector", 0.85, Severity.MEDIUM, {"unique_dst_ports": 64, "failed_ratio": 0.88}),
+        ("STAGE 2: DGA DNS COMMAND RESOLUTION", ThreatClass.DGA_DNS_TUNNELLING, DetectorType.DETERMINISTIC_BASELINE, "DNSAnomalyDetector", 0.90, Severity.HIGH, {"entropy": 4.35, "domain": "x89qj2m-apt.cc"}),
+        ("STAGE 3: ENCRYPTED C2 BEACONING", ThreatClass.BOTNET_C2_BEACONING, DetectorType.DETERMINISTIC_BASELINE, "C2BeaconDetector", 0.92, Severity.HIGH, {"periodicity_score": 0.96, "jitter_pct": 3.2, "ja3": "JA3_SUS_1"}),
+        ("STAGE 4: OUTBOUND DATA EXFILTRATION", ThreatClass.DATA_EXFILTRATION, DetectorType.DETERMINISTIC_BASELINE, "ExfiltrationDetector", 0.95, Severity.CRITICAL, {"total_outbound_bytes": 10500000, "upload_ratio": 120.0}),
+    ]
+
+    for stage_name, tc, det_type, det_name, conf, sev, indicators in apt_stages:
+        sig = DetectionSignal(
+            signal_id=f"sig-apt-{int(time.time()*1000)%100000}",
+            threat_class=tc,
+            detector_type=det_type,
+            confidence=conf,
+            severity=sev,
+            source_entity=apt_host,
+            target_entity="198.51.100.99" if "EXFIL" in tc.value else ("x89qj2m-apt.cc" if "DNS" in tc.value else "198.51.100.42"),
+            timestamp_iso=datetime.now(timezone.utc).isoformat(),
+            indicators=indicators,
+        )
+        entity_mem.record_signal(sig)
+        grp, comp_risk, fused_sev = fusion_engine.process_signal(sig, entity_memory=entity_mem, graph=entity_graph)
+        print(
+            f"  [+] {stage_name:<38} | Signal Conf: {conf:.2f} -> FUSED COMPOSITE RISK: {comp_risk:.2f} ({fused_sev.value}) | "
+            f"Correlated Signals on Host: {len(grp.signals)}"
+        )
+
     print("\n" + "=" * 70)
     print(" DEMO PIPELINE SUMMARY")
     print("=" * 70)
     print(f"Total Packets Ingested:    {total_packets:,}")
     print(f"Total Flows Tracked:       {len(flow_manager.flows)}")
-    print(f"Total Threat Signals:      {total_signals}")
-    print(f"High-Confidence Alerts:    {total_alerts}")
+    print(f"Total Threat Signals:      {total_signals + len(apt_stages)}")
+    print(f"High-Confidence Alerts:    {total_alerts + len(apt_stages)}")
     print(f"Entities in Memory:        {len(entity_mem._profiles)}")
     print(f"Graph Topology Nodes:      {len(entity_graph.nodes)}")
     print("=" * 70)
@@ -253,8 +287,8 @@ def run_live_pipeline_demonstration(
     return {
         "packets": total_packets,
         "flows": len(flow_manager.flows),
-        "signals": total_signals,
-        "alerts": total_alerts,
+        "signals": total_signals + len(apt_stages),
+        "alerts": total_alerts + len(apt_stages),
     }
 
 
