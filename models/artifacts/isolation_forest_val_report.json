@@ -1,0 +1,324 @@
+{
+  "model_name": "IsolationForest",
+  "split_evaluated": "validation",
+  "binary_metrics": {
+    "accuracy": 0.7480852480852481,
+    "precision": 0.8985196309804763,
+    "recall": 0.5073903561909378,
+    "f1": 0.6485481997677119,
+    "false_positive_rate": 0.048443260958623516,
+    "false_negative_rate": 0.49260964380906225,
+    "confusion_matrix": [
+      [
+        9291,
+        473
+      ],
+      [
+        4066,
+        4188
+      ]
+    ],
+    "true_positives": 4188,
+    "false_positives": 473,
+    "true_negatives": 9291,
+    "false_negatives": 4066,
+    "n_benign_val_samples": 9764,
+    "n_threat_val_samples": 8254,
+    "n_predicted_anomalous": 4661,
+    "n_predicted_benign": 13357,
+    "total_val_samples": 18018
+  },
+  "score_distributions": {
+    "benign_samples": {
+      "label": "BENIGN",
+      "count": 9764,
+      "mean": 0.05337976348205574,
+      "median": 0.05872030241377091,
+      "std": 0.028303005282587848,
+      "min": -0.14088331259590947,
+      "max": 0.11046789056109912,
+      "p1": -0.055156831440802565,
+      "p5": 0.001262062532364513,
+      "p10": 0.020528876384429125,
+      "p25": 0.042016834335954586,
+      "p75": 0.07187258650018727,
+      "p90": 0.08138896490165899,
+      "p95": 0.08687700458687637,
+      "p99": 0.09555322180674924
+    },
+    "threat_samples": {
+      "label": "ANY_THREAT",
+      "count": 8254,
+      "mean": 0.0020102428825514874,
+      "median": -0.0008137799438556192,
+      "std": 0.039196051739811624,
+      "min": -0.18009724382326153,
+      "max": 0.107681453157698,
+      "p1": -0.10054892393597115,
+      "p5": -0.05997137218741696,
+      "p10": -0.04364868315264557,
+      "p25": -0.02335079205627727,
+      "p75": 0.02928708517462611,
+      "p90": 0.05575701930041272,
+      "p95": 0.06756888216961048,
+      "p99": 0.08389374299652726
+    },
+    "score_direction_note": "LOWER (more negative) score = MORE anomalous. HIGHER score = more benign-like. Source: IsolationForest.decision_function()"
+  },
+  "threshold_analysis": {
+    "default_contamination_threshold": {
+      "threshold_value": "IsolationForest.contamination=0.05 (sklearn internal)",
+      "accuracy": 0.7480852480852481,
+      "precision": 0.8985196309804763,
+      "recall": 0.5073903561909378,
+      "f1": 0.6485481997677119,
+      "false_positive_rate": 0.048443260958623516,
+      "false_negative_rate": 0.49260964380906225,
+      "predicted_anomalies": 4661,
+      "predicted_benign": 13357,
+      "confusion_matrix": [
+        [
+          9291,
+          473
+        ],
+        [
+          4066,
+          4188
+        ]
+      ]
+    },
+    "percentile_thresholds": {
+      "p1_threshold": {
+        "threshold_value": -0.08346428133195956,
+        "percentile": 1,
+        "accuracy": 0.5483960483960484,
+        "precision": 0.8232044198895028,
+        "recall": 0.018051853646716742,
+        "f1": 0.035328986366330764,
+        "false_positive_rate": 0.0032773453502662844,
+        "false_negative_rate": 0.9819481463532832,
+        "predicted_anomalies": 181,
+        "predicted_benign": 17837,
+        "confusion_matrix": [
+          [
+            9732,
+            32
+          ],
+          [
+            8105,
+            149
+          ]
+        ]
+      },
+      "p5_threshold": {
+        "threshold_value": -0.04528390566463487,
+        "percentile": 5,
+        "accuracy": 0.5777000777000777,
+        "precision": 0.8579356270810211,
+        "recall": 0.09365156287860431,
+        "f1": 0.16886947023484436,
+        "false_positive_rate": 0.013109381401065138,
+        "false_negative_rate": 0.9063484371213957,
+        "predicted_anomalies": 901,
+        "predicted_benign": 17117,
+        "confusion_matrix": [
+          [
+            9636,
+            128
+          ],
+          [
+            7481,
+            773
+          ]
+        ]
+      },
+      "p10_threshold": {
+        "threshold_value": -0.02944197426528835,
+        "percentile": 10,
+        "accuracy": 0.6193806193806194,
+        "precision": 0.8873473917869035,
+        "recall": 0.19372425490671188,
+        "f1": 0.318019093078759,
+        "false_positive_rate": 0.02079065956575174,
+        "false_negative_rate": 0.8062757450932881,
+        "predicted_anomalies": 1802,
+        "predicted_benign": 16216,
+        "confusion_matrix": [
+          [
+            9561,
+            203
+          ],
+          [
+            6655,
+            1599
+          ]
+        ]
+      },
+      "p15_threshold": {
+        "threshold_value": -0.018943528920169175,
+        "percentile": 15,
+        "accuracy": 0.661949161949162,
+        "precision": 0.9001109877913429,
+        "recall": 0.29476617397625393,
+        "f1": 0.44409966231632747,
+        "false_positive_rate": 0.027652601392871772,
+        "false_negative_rate": 0.7052338260237461,
+        "predicted_anomalies": 2703,
+        "predicted_benign": 15315,
+        "confusion_matrix": [
+          [
+            9494,
+            270
+          ],
+          [
+            5821,
+            2433
+          ]
+        ]
+      },
+      "p20_threshold": {
+        "threshold_value": -0.010366517478899051,
+        "percentile": 20,
+        "accuracy": 0.7048507048507049,
+        "precision": 0.9073251942286349,
+        "recall": 0.3961715531863339,
+        "f1": 0.5515263956822398,
+        "false_positive_rate": 0.03420729209340434,
+        "false_negative_rate": 0.6038284468136661,
+        "predicted_anomalies": 3604,
+        "predicted_benign": 14414,
+        "confusion_matrix": [
+          [
+            9430,
+            334
+          ],
+          [
+            4984,
+            3270
+          ]
+        ]
+      },
+      "p25_threshold": {
+        "threshold_value": -0.0015567567371810864,
+        "percentile": 25,
+        "accuracy": 0.7415362415362415,
+        "precision": 0.8992230854605994,
+        "recall": 0.49079234310637265,
+        "f1": 0.6350027431616898,
+        "false_positive_rate": 0.04649733715690291,
+        "false_negative_rate": 0.5092076568936273,
+        "predicted_anomalies": 4505,
+        "predicted_benign": 13513,
+        "confusion_matrix": [
+          [
+            9310,
+            454
+          ],
+          [
+            4203,
+            4051
+          ]
+        ]
+      },
+      "p30_threshold": {
+        "threshold_value": 0.008213585900509872,
+        "percentile": 30,
+        "accuracy": 0.7747807747807748,
+        "precision": 0.8880873103958564,
+        "recall": 0.581657378240853,
+        "f1": 0.7029282576866764,
+        "false_positive_rate": 0.06196231052847194,
+        "false_negative_rate": 0.4183426217591471,
+        "predicted_anomalies": 5406,
+        "predicted_benign": 12612,
+        "confusion_matrix": [
+          [
+            9159,
+            605
+          ],
+          [
+            3453,
+            4801
+          ]
+        ]
+      }
+    },
+    "note": "All threshold analysis performed on VALIDATION set only. Test set was NOT used for threshold selection.",
+    "score_direction": "LOWER score = MORE anomalous. Threshold: anomalous if score <= threshold."
+  },
+  "latency": {
+    "n_validation_samples": 18018,
+    "total_prediction_time_seconds": 0.048051,
+    "avg_per_sample_latency_us": 2.6668,
+    "throughput_samples_per_second": 374975.66,
+    "note": "Local benchmark measurement only. Results will vary by hardware."
+  },
+  "sanity_checks": {
+    "fitted_on_benign_only": {
+      "passed": true,
+      "benign_train_samples": 46027,
+      "total_train_samples": 83918,
+      "note": "IsolationForest.fit() called only with X_train[y_train == 0]"
+    },
+    "validation_not_used_for_fitting": {
+      "passed": true,
+      "note": "X_val and y_val only used in model.predict() and decision_function()"
+    },
+    "test_not_used": {
+      "passed": true,
+      "note": "Test set was never loaded or evaluated in this pipeline"
+    },
+    "feature_ordering": {
+      "passed": true,
+      "expected_features": 52,
+      "actual_features": 52
+    },
+    "no_forbidden_columns": {
+      "passed": true,
+      "forbidden_checked": [
+        "baseline_deviation",
+        "recent_risk"
+      ],
+      "found": []
+    },
+    "no_nan_or_inf_in_training": {
+      "passed": true,
+      "has_nan": false,
+      "has_inf": false
+    },
+    "valid_binary_predictions": {
+      "passed": true,
+      "unique_predicted_values": [
+        0,
+        1
+      ],
+      "note": "0=Benign, 1=Anomalous (mapped from IsolationForest +1/-1)"
+    },
+    "anomaly_score_direction_documented": {
+      "passed": true,
+      "direction": "LOWER (more negative) = MORE anomalous. Higher = more benign-like.",
+      "sklearn_function": "decision_function(X)"
+    },
+    "model_is_fitted": {
+      "passed": true,
+      "n_estimators_fitted": 100
+    },
+    "ALL_CHECKS_PASSED": true
+  },
+  "interpretation": {
+    "can_detect": "Statistical deviations from learned BENIGN traffic baseline. Useful for flagging potentially unknown or zero-day threats that were not represented in the training label set.",
+    "cannot_detect": "Cannot identify which specific threat class (C2/DGA/DDoS/etc.) caused the anomaly. Does not provide threat family classification.",
+    "zero_day_capability": "Because IsolationForest learns only from benign traffic, it can flag novel attack patterns that supervised models (trained only on known attack types) might miss.",
+    "operational_recommendation": "Use IsolationForest as a first-stage alert layer alongside LightGBM/RandomForest classification. An IF anomaly that the supervised model cannot classify may indicate a zero-day threat warranting manual investigation."
+  },
+  "configuration": {
+    "random_seed": 42,
+    "n_estimators": 100,
+    "contamination": 0.05,
+    "max_samples": "auto",
+    "n_jobs": 1
+  },
+  "training_time_seconds": 0.1741,
+  "benign_train_samples": 46027,
+  "total_train_samples": 83918
+}

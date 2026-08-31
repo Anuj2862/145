@@ -1,0 +1,127 @@
+{
+  "model_name": "LGBMClassifier",
+  "timestamp_utc": "2026-08-31T13:29:46.274315+00:00",
+  "split_evaluated": "validation",
+  "metrics": {
+    "accuracy": 0.9988899988899989,
+    "macro_precision": 0.9988732492116047,
+    "macro_recall": 0.9980398193324864,
+    "macro_f1": 0.9984515074944185,
+    "weighted_precision": 0.9988914491219066,
+    "weighted_recall": 0.9988899988899989,
+    "weighted_f1": 0.9988876729208904,
+    "per_class_metrics": {
+      "BENIGN": {
+        "precision": 0.9989768774299161,
+        "recall": 1.0,
+        "f1": 0.9994881768860682
+      },
+      "DDOS": {
+        "precision": 0.9987661937075879,
+        "recall": 1.0,
+        "f1": 0.9993827160493827
+      },
+      "C2": {
+        "precision": 0.9975247524752475,
+        "recall": 1.0,
+        "f1": 0.9987608426270136
+      },
+      "DGA_DNS_TUNNEL": {
+        "precision": 0.9986101459346769,
+        "recall": 0.9986101459346769,
+        "f1": 0.9986101459346769
+      },
+      "ENCRYPTED_THREAT": {
+        "precision": 1.0,
+        "recall": 0.9887267904509284,
+        "f1": 0.9943314438146049
+      },
+      "RECON": {
+        "precision": 0.9982347749338041,
+        "recall": 1.0,
+        "f1": 0.9991166077738516
+      },
+      "EXFILTRATION": {
+        "precision": 1.0,
+        "recall": 0.9989417989417989,
+        "f1": 0.9994706193753309
+      }
+    },
+    "confusion_matrix": [
+      [
+        9764,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        1619,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        1612,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        2,
+        1437,
+        0,
+        0,
+        0
+      ],
+      [
+        10,
+        2,
+        2,
+        2,
+        1491,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1131,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        944
+      ]
+    ]
+  },
+  "configuration": {
+    "random_seed": 42,
+    "objective": "multiclass",
+    "num_class": 7,
+    "n_estimators": 100,
+    "learning_rate": 0.05,
+    "num_leaves": 31,
+    "max_depth": -1,
+    "early_stopping_rounds": 10,
+    "num_threads": 1
+  }
+}

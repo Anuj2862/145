@@ -17,20 +17,6 @@ ENV/
 .coverage
 htmlcov/
 
-# Model artifacts and binary models
-models/artifacts/*
-!models/artifacts/.gitkeep
-*.joblib
-*.pkl
-
-# Processed dataset exports
-dataset/processed/*.csv
-!dataset/processed/.gitkeep
-
-# PCAP captures & Large Files
-*.pcap
-*.pcapng
-
 # Logs
 *.log
 
