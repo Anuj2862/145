@@ -57,10 +57,12 @@ class UnifiedM2Orchestrator:
         artifact_dir: str = "models/artifacts",
         enable_ml: bool = True,
         enable_baseline: bool = True,
+        enable_anomaly: bool = True,
     ):
         self.artifact_dir = artifact_dir
         self.enable_ml = enable_ml
         self.enable_baseline = enable_baseline
+        self.enable_anomaly = enable_anomaly
 
         # 1. Initialize Baseline Detection Engine
         self.baseline_engine = DetectionEngine()
@@ -70,7 +72,7 @@ class UnifiedM2Orchestrator:
         # 2. Safely initialize ML Inference Engine
         self.ml_engine: Optional[MLInferenceEngine] = None
         self.ml_error: Optional[str] = None
-        if self.enable_ml:
+        if self.enable_ml or self.enable_anomaly:
             self._initialize_ml_engine()
 
     def _register_baseline_detectors(self) -> None:
@@ -108,7 +110,7 @@ class UnifiedM2Orchestrator:
             results.extend(baseline_results)
 
         # 2. Run ML models if enabled
-        if self.enable_ml:
+        if self.enable_ml or self.enable_anomaly:
             # Extract or validate 52-feature vector for ML
             ml_feats: Optional[np.ndarray] = None
             feat_error: Optional[str] = None
@@ -125,96 +127,104 @@ class UnifiedM2Orchestrator:
                     feat_error = f"FeatureVector conversion failed: {exc}"
 
             # 2a. LightGBM Primary Classifier
-            if self.ml_engine is None:
-                results.append(
-                    DetectorResult(
-                        detector_name="LightGBMClassifier",
-                        error=self.ml_error or "MLInferenceEngine unavailable",
-                    )
-                )
-            elif feat_error:
-                results.append(
-                    DetectorResult(
-                        detector_name="LightGBMClassifier",
-                        error=feat_error,
-                    )
-                )
-            else:
-                try:
-                    lgb_res = self.ml_engine.predict_classification(ml_feats, use_fallback_rf=False)
-                    if isinstance(lgb_res, list):
-                        lgb_res = lgb_res[0]
-
-                    lgb_signal = SignalAdapter.to_detection_signal(
-                        lgb_res,
-                        source_entity=ctx.source_entity,
-                        timestamp_iso=ctx.timestamp_iso,
-                    )
-                    results.append(
-                        DetectorResult(detector_name="LightGBMClassifier", signal=lgb_signal)
-                    )
-                except Exception as exc:
+            if self.enable_ml:
+                if self.ml_engine is None:
                     results.append(
                         DetectorResult(
                             detector_name="LightGBMClassifier",
-                            error=f"LightGBM inference error: {exc}\n{traceback.format_exc()}",
+                            error=self.ml_error or "MLInferenceEngine unavailable",
                         )
                     )
-
-            # 2b. Isolation Forest Anomaly Detector
-            if self.ml_engine is None:
-                results.append(
-                    DetectorResult(
-                        detector_name="IsolationForestAnomaly",
-                        error=self.ml_error or "MLInferenceEngine unavailable",
+                elif feat_error:
+                    results.append(
+                        DetectorResult(
+                            detector_name="LightGBMClassifier",
+                            error=feat_error,
+                        )
                     )
-                )
-            elif feat_error:
-                results.append(
-                    DetectorResult(
-                        detector_name="IsolationForestAnomaly",
-                        error=feat_error,
-                    )
-                )
-            else:
-                try:
-                    lgb_res = self.ml_engine.predict_classification(ml_feats, use_fallback_rf=False)
-                    if isinstance(lgb_res, list):
-                        lgb_res = lgb_res[0]
+                else:
+                    try:
+                        lgb_res = self.ml_engine.predict_classification(ml_feats, use_fallback_rf=False)
+                        if isinstance(lgb_res, list):
+                            lgb_res = lgb_res[0]
 
-                    if_res = self.ml_engine.predict_anomaly(ml_feats)
-                    if isinstance(if_res, list):
-                        if_res = if_res[0]
-
-                    unified = UnifiedMLResult(
-                        classification=lgb_res,
-                        anomaly=if_res,
-                        source_entity=ctx.source_entity,
-                        timestamp_iso=ctx.timestamp_iso,
-                    )
-
-                    # SignalAdapter produces UNKNOWN_ANOMALY if IF flags anomaly on Benign LightGBM traffic,
-                    # or None if both agree it's benign. If LightGBM already flagged a known threat,
-                    # IF anomaly evidence is attached to the LightGBM signal or produced independently.
-                    if not lgb_res.is_threat and if_res.is_anomaly:
-                        if_signal = SignalAdapter.to_detection_signal(
-                            unified,
+                        lgb_signal = SignalAdapter.to_detection_signal(
+                            lgb_res,
                             source_entity=ctx.source_entity,
                             timestamp_iso=ctx.timestamp_iso,
                         )
-                    else:
-                        if_signal = None
+                        results.append(
+                            DetectorResult(detector_name="LightGBMClassifier", signal=lgb_signal)
+                        )
+                    except Exception as exc:
+                        results.append(
+                            DetectorResult(
+                                detector_name="LightGBMClassifier",
+                                error=f"LightGBM inference error: {exc}\n{traceback.format_exc()}",
+                            )
+                        )
 
-                    results.append(
-                        DetectorResult(detector_name="IsolationForestAnomaly", signal=if_signal)
-                    )
-                except Exception as exc:
+            # 2b. Isolation Forest Anomaly Detector
+            if self.enable_anomaly:
+                if self.ml_engine is None:
                     results.append(
                         DetectorResult(
                             detector_name="IsolationForestAnomaly",
-                            error=f"Isolation Forest inference error: {exc}\n{traceback.format_exc()}",
+                            error=self.ml_error or "MLInferenceEngine unavailable",
                         )
                     )
+                elif feat_error:
+                    results.append(
+                        DetectorResult(
+                            detector_name="IsolationForestAnomaly",
+                            error=feat_error,
+                        )
+                    )
+                else:
+                    try:
+                        lgb_res = self.ml_engine.predict_classification(ml_feats, use_fallback_rf=False) if self.enable_ml else ClassificationResult(
+                            predicted_class_index=0,
+                            predicted_class_name="BENIGN",
+                            threat_class=None,
+                            confidence=0.0,
+                            probabilities={"BENIGN": 1.0},
+                            is_threat=False,
+                            model_name="LightGBMClassifier",
+                            inference_latency_ms=0.0,
+                        )
+                        if isinstance(lgb_res, list):
+                            lgb_res = lgb_res[0]
+
+                        if_res = self.ml_engine.predict_anomaly(ml_feats)
+                        if isinstance(if_res, list):
+                            if_res = if_res[0]
+
+                        unified = UnifiedMLResult(
+                            classification=lgb_res,
+                            anomaly=if_res,
+                            source_entity=ctx.source_entity,
+                            timestamp_iso=ctx.timestamp_iso,
+                        )
+
+                        if if_res.is_anomaly and (not self.enable_ml or not lgb_res.is_threat):
+                            if_signal = SignalAdapter.to_detection_signal(
+                                unified,
+                                source_entity=ctx.source_entity,
+                                timestamp_iso=ctx.timestamp_iso,
+                            )
+                        else:
+                            if_signal = None
+
+                        results.append(
+                            DetectorResult(detector_name="IsolationForestAnomaly", signal=if_signal)
+                        )
+                    except Exception as exc:
+                        results.append(
+                            DetectorResult(
+                                detector_name="IsolationForestAnomaly",
+                                error=f"Isolation Forest inference error: {exc}\n{traceback.format_exc()}",
+                            )
+                        )
 
         return results
 
