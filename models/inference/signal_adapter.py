@@ -267,67 +267,103 @@ class FeatureVectorAdapter:
         return np.array(feats, dtype=np.float64).reshape(1, -1)
 
     @staticmethod
-    def feature_vector_to_features(fv: FeatureVector) -> np.ndarray:
-        """Extract 52 ML features from a Pydantic FeatureVector contract schema.
+    @staticmethod
+    def context_to_features(ctx: Any) -> np.ndarray:
+        """Extract 52 ML features from a DetectionContext contract instance.
         
-        Reads across flow, dns, tls, temporal, and entity feature sub-objects.
-        Fills unextracted or None values with default 0.0.
+        Bridges single-flow FeatureVector and multi-flow/entity context features
+        into the strict 52-feature vector expected by LightGBM and Isolation Forest.
         """
-        data = {}
+        data: Dict[str, float] = {}
+        fv = getattr(ctx, "feature_vector", None)
+        if fv:
+            # 1. Flow features
+            if getattr(fv, "flow_features", None):
+                ff = fv.flow_features
+                data["duration"] = float(getattr(ff, "duration", getattr(ff, "duration_sec", 0.0)) or 0.0)
+                data["total_packets"] = float(getattr(ff, "total_packets", getattr(ff, "packet_count", 0.0)) or 0.0)
+                data["total_bytes"] = float(getattr(ff, "total_bytes", getattr(ff, "byte_count", 0.0)) or 0.0)
+                data["bytes_forward"] = float(getattr(ff, "bytes_fwd", getattr(ff, "bytes_forward", 0.0)) or 0.0)
+                data["bytes_backward"] = float(getattr(ff, "bytes_bwd", getattr(ff, "bytes_backward", 0.0)) or 0.0)
+                data["packets_per_sec"] = float(getattr(ff, "packets_per_sec", 0.0) or 0.0)
+                data["bytes_per_sec"] = float(getattr(ff, "bytes_per_sec", 0.0) or 0.0)
+                data["packet_size_mean"] = float(getattr(ff, "avg_packet_size", getattr(ff, "packet_size_mean", 0.0)) or 0.0)
 
-        # 1. Flow features
-        if fv.flow_features:
-            ff = fv.flow_features
-            data["duration"] = getattr(ff, "duration", getattr(ff, "duration_sec", 0.0))
-            data["total_packets"] = getattr(ff, "total_packets", getattr(ff, "packet_count", 0.0))
-            data["total_bytes"] = getattr(ff, "total_bytes", getattr(ff, "byte_count", 0.0))
-            data["bytes_forward"] = getattr(ff, "bytes_fwd", getattr(ff, "bytes_forward", 0.0))
-            data["bytes_backward"] = getattr(ff, "bytes_bwd", getattr(ff, "bytes_backward", 0.0))
-            data["packets_per_sec"] = getattr(ff, "packets_per_sec", 0.0)
-            data["bytes_per_sec"] = getattr(ff, "bytes_per_sec", 0.0)
-            data["packet_size_mean"] = getattr(ff, "avg_packet_size", getattr(ff, "packet_size_mean", 0.0))
+            # 2. Temporal features
+            if getattr(fv, "temporal_features", None):
+                tf = fv.temporal_features
+                data["iat_mean"] = float(getattr(tf, "iat_mean_ms", getattr(tf, "iat_mean", 0.0)) or 0.0)
+                data["iat_std"] = float(getattr(tf, "iat_std_ms", getattr(tf, "iat_std", 0.0)) or 0.0)
+                data["periodicity_score"] = float(getattr(tf, "periodicity_score", 0.0) or 0.0)
+                data["jitter"] = float(getattr(tf, "jitter_pct", getattr(tf, "jitter", 0.0)) or 0.0)
+                data["burst_rate"] = float(getattr(tf, "burst_rate", 0.0) or 0.0)
 
-        # 2. Temporal features
-        if fv.temporal_features:
-            tf = fv.temporal_features
-            data["iat_mean"] = getattr(tf, "iat_mean_ms", getattr(tf, "iat_mean", 0.0))
-            data["iat_std"] = getattr(tf, "iat_std_ms", getattr(tf, "iat_std", 0.0))
-            data["periodicity_score"] = getattr(tf, "periodicity_score", 0.0)
-            data["jitter"] = getattr(tf, "jitter_pct", getattr(tf, "jitter", 0.0))
-            data["burst_rate"] = getattr(tf, "burst_rate", 0.0)
+            # 3. DNS features
+            if getattr(fv, "dns_features", None):
+                df = fv.dns_features
+                data["dns_query_count"] = float(getattr(df, "dns_query_count", 0.0) or 0.0)
+                data["unique_domain_count"] = float(getattr(df, "unique_domains", getattr(df, "unique_domain_count", 0.0)) or 0.0)
+                data["domain_length_mean"] = float(getattr(df, "avg_domain_len", getattr(df, "domain_length_mean", 0.0)) or 0.0)
+                data["domain_entropy"] = float(getattr(df, "domain_entropy", getattr(df, "entropy_mean", 0.0)) or 0.0)
+                data["ngram_score"] = float(getattr(df, "subdomain_entropy", getattr(df, "ngram_score", 0.0)) or 0.0)
+                data["dns_query_rate"] = float(getattr(df, "dns_query_rate", 0.0) or 0.0)
 
-        # 3. DNS features
-        if fv.dns_features:
-            df = fv.dns_features
-            data["dns_query_count"] = getattr(df, "dns_query_count", 0.0)
-            data["unique_domain_count"] = getattr(df, "unique_domains", getattr(df, "unique_domain_count", 0.0))
-            data["domain_length_mean"] = getattr(df, "avg_domain_len", getattr(df, "domain_length_mean", 0.0))
-            data["domain_entropy"] = getattr(df, "domain_entropy", getattr(df, "entropy_mean", 0.0))
-            data["ngram_score"] = getattr(df, "subdomain_entropy", getattr(df, "ngram_score", 0.0))
-            data["dns_query_rate"] = getattr(df, "dns_query_rate", 0.0)
+            # 4. TLS features
+            if getattr(fv, "tls_features", None):
+                tlf = fv.tls_features
+                data["session_resumption"] = 1.0 if getattr(tlf, "session_reused", False) else 0.0
+                data["tls_packet_size_mean"] = float(getattr(tlf, "tls_packet_size_mean", 0.0) or 0.0)
+                ja3 = getattr(tlf, "ja3_hash", None)
+                if ja3:
+                    ja3_val = f"ja3_JA3_{ja3.upper()}"
+                    if ja3_val in EXPECTED_FEATURE_NAMES:
+                        data[ja3_val] = 1.0
+                ja4 = getattr(tlf, "ja4_hash", None)
+                if ja4:
+                    ja4_val = f"ja4_JA4_{ja4.upper()}"
+                    if ja4_val in EXPECTED_FEATURE_NAMES:
+                        data[ja4_val] = 1.0
+                tls_v = getattr(tlf, "tls_version", None)
+                if tls_v:
+                    tls_ver = f"tls_version_{tls_v.upper()}"
+                    if tls_ver in EXPECTED_FEATURE_NAMES:
+                        data[tls_ver] = 1.0
 
-        # 4. TLS features
-        if fv.tls_features:
-            tlf = fv.tls_features
-            data["session_resumption"] = 1.0 if tlf.session_reused else 0.0
-            data["tls_packet_size_mean"] = getattr(tlf, "tls_packet_size_mean", 0.0)
-            if tlf.ja3_hash:
-                ja3_val = f"ja3_JA3_{tlf.ja3_hash.upper()}"
-                if ja3_val in EXPECTED_FEATURE_NAMES:
-                    data[ja3_val] = 1.0
-            if tlf.ja4_hash:
-                ja4_val = f"ja4_JA4_{tlf.ja4_hash.upper()}"
-                if ja4_val in EXPECTED_FEATURE_NAMES:
-                    data[ja4_val] = 1.0
-            if tlf.tls_version:
-                tls_ver = f"tls_version_{tlf.tls_version.upper()}"
-                if tls_ver in EXPECTED_FEATURE_NAMES:
-                    data[tls_ver] = 1.0
+            # 5. Entity features from FeatureVector
+            if getattr(fv, "entity_features", None):
+                ef = fv.entity_features
+                data["entity_avg_connection_interval"] = float(getattr(ef, "entity_avg_connection_interval", 0.0) or 0.0)
+                data["entity_periodicity"] = float(getattr(ef, "entity_periodicity", 0.0) or 0.0)
 
-        # 5. Entity features
-        if fv.entity_features:
-            ef = fv.entity_features
-            data["entity_avg_connection_interval"] = getattr(ef, "entity_avg_connection_interval", 0.0)
-            data["entity_periodicity"] = getattr(ef, "entity_periodicity", 0.0)
+        # 6. Entity Reconnaissance Features from DetectionContext
+        rf = getattr(ctx, "recon_features", None)
+        if rf:
+            data["unique_dst_ips"] = float(getattr(rf, "unique_dst_ip_count", 0.0) or 0.0)
+            data["unique_dst_ports"] = float(getattr(rf, "unique_dst_port_count", 0.0) or 0.0)
+            data["connection_attempt_rate"] = float(getattr(rf, "connection_rate_per_sec", 0.0) or 0.0)
+            data["failed_connection_ratio"] = float(getattr(rf, "failed_connection_ratio", 0.0) or 0.0)
+            data["fan_out"] = float(getattr(rf, "unique_dst_ip_count", 0.0) + getattr(rf, "unique_dst_port_count", 0.0))
+            data["entity_flow_count_1m"] = float(getattr(rf, "flow_count", 0.0) or 0.0)
+            data["entity_unique_destinations_1m"] = float(getattr(rf, "unique_dst_ip_count", 0.0) or 0.0)
+
+        # 7. Entity Exfiltration Features from DetectionContext
+        exf = getattr(ctx, "exfil_features", None)
+        if exf:
+            data["outbound_bytes"] = float(getattr(exf, "total_outbound_bytes", 0.0) or 0.0)
+            data["outbound_rate"] = float(getattr(exf, "outbound_bytes_per_sec", 0.0) or 0.0)
+            data["upload_download_ratio"] = float(getattr(exf, "upload_download_ratio", 0.0) or 0.0)
+            data["destination_count"] = float(getattr(exf, "destination_count", 0.0) or 0.0)
+            data["large_transfer_score"] = float(getattr(exf, "large_transfer_count", 0.0) or 0.0)
 
         return FeatureVectorAdapter.dict_to_features(data)
+
+    @staticmethod
+    def feature_vector_to_features(fv: FeatureVector) -> np.ndarray:
+        """Extract 52 ML features from a Pydantic FeatureVector contract schema."""
+        class DummyCtx:
+            def __init__(self, feature_vector: FeatureVector):
+                self.feature_vector = feature_vector
+                self.recon_features = None
+                self.exfil_features = None
+
+        return FeatureVectorAdapter.context_to_features(DummyCtx(fv))

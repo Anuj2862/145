@@ -93,6 +93,9 @@ class MultiScenarioPcapGenerator:
         # 6. DGA / DNS Tunnelling (High entropy DGA, DNS tunneling burst)
         captures.update(self._generate_dns_scenarios())
 
+        # 7. Encrypted Malware TLS Metadata
+        captures.update(self._generate_encrypted_scenarios())
+
         # Save to Manifest
         self.manifest_manager.manifest = GroundTruthManifest(
             manifest_version="1.1.0",
@@ -101,6 +104,60 @@ class MultiScenarioPcapGenerator:
         )
         self.manifest_manager.save_to_file(self.manifest_path)
         return captures
+
+    def _generate_encrypted_scenarios(self) -> Dict[str, CaptureRecord]:
+        """Generate encrypted malware TLS handshake metadata scenario."""
+        records = {}
+        file_path = self.output_base / "encrypted" / "tls_malware_c2_ja3_sus.pcap"
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        start_ts = self.base_epoch + 25000
+        cur_ts = start_ts
+        pkt_count = 0
+
+        with open(file_path, "wb") as f:
+            write_pcap_header(f)
+
+            # 60 TLS handshake sessions over port 443 with suspicious metadata
+            for i in range(60):
+                cur_ts += 1.0
+                write_pcap_packet(f, int(cur_ts), int((cur_ts % 1) * 1e6), "10.0.9.33", "198.51.100.88", 51000 + i, 443, 6, 350, 0x18)
+                pkt_count += 1
+
+        start_iso = datetime.fromtimestamp(start_ts, tz=timezone.utc).isoformat()
+        end_iso = datetime.fromtimestamp(cur_ts, tz=timezone.utc).isoformat()
+
+        event = GroundTruthEvent(
+            event_id="EVT-ENC-MALWARE-001",
+            traffic_class=EvaluationTrafficClass.ENCRYPTED_MALWARE,
+            time_window=TemporalWindow(start_time_iso=start_iso, end_time_iso=end_iso),
+            source_entity="10.0.9.33",
+            target_entity="198.51.100.88",
+            target_port=443,
+            protocol=6,
+            confidence_level=1.0,
+            observable_indicators={"tls_version": "TLS 1.2", "ja3_match": True}
+        )
+
+        records["CAP-ENC-MALWARE-001"] = CaptureRecord(
+            capture_id="CAP-ENC-MALWARE-001",
+            file_path=str(file_path),
+            traffic_type="ATTACK",
+            primary_label=EvaluationTrafficClass.ENCRYPTED_MALWARE,
+            capture_start_iso=start_iso,
+            capture_end_iso=end_iso,
+            duration_sec=round(cur_ts - start_ts, 2),
+            packet_count=pkt_count,
+            source_ips=["10.0.9.33"],
+            target_ips=["198.51.100.88"],
+            protocols=[6],
+            generation_method=GenerationMethod.SYNTHETIC_LAB,
+            dataset_source="UniGuard Isolated Testbed - Encrypted Malware TLS Handshake",
+            split=DatasetSplit.EVALUATION_HOLD_OUT,
+            labeled_events=[event],
+            notes="TLS session metadata with suspicious handshake characteristics"
+        )
+        return records
 
     def _generate_benign_scenarios(self) -> Dict[str, CaptureRecord]:
         """Generate pure benign workstation and background telemetry captures."""

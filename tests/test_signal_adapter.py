@@ -346,12 +346,69 @@ def test_process_window_for_orchestrator_execution():
     assert recon_signals[0].source_entity == "10.0.0.5"
 
 
-# ---------------------------------------------------------------------------
-# 7. Replay Integration Test
-# ---------------------------------------------------------------------------
-
 def test_replay_pcap_callback_none_unchanged(tmp_path):
     from pipeline.replay import replay_pcap
     # Pass non-existent pcap to verify clean failure handling or mock iter
     with pytest.raises(Exception):
         replay_pcap("non_existent_file.pcap")
+
+
+# ---------------------------------------------------------------------------
+# 8. FeatureVectorAdapter Context-to-Features Bridge (Phase 2D.2)
+# ---------------------------------------------------------------------------
+
+def test_feature_vector_adapter_context_to_features():
+    from models.inference.signal_adapter import FeatureVectorAdapter, EXPECTED_FEATURE_NAMES
+    from schemas import FeatureVector, FlowFeatures, TemporalFeatures, DNSFeatures, TLSFeatures
+
+    fv = FeatureVector(
+        feature_id="fv-test-bridge",
+        entity_ip="192.168.1.100",
+        flow_id="192.168.1.100:5000-10.0.0.1:443-6",
+        timestamp_iso="2026-09-01T00:00:00Z",
+        flow_features=FlowFeatures(packets_per_sec=5000.0, bytes_per_sec=250000.0, syn_ratio=0.95),
+        temporal_features=TemporalFeatures(iat_mean_ms=10.0, iat_std_ms=2.0, periodicity_score=0.9, jitter_pct=5.0),
+        dns_features=DNSFeatures(dns_query_count=50, entropy_mean=4.2),
+        tls_features=TLSFeatures(ja3_hash="JA3_SUS_1", tls_version="TLS1.2"),
+    )
+
+    rf = ReconFeatures(
+        flow_count=120,
+        unique_dst_ip_count=1,
+        unique_dst_port_count=100,
+        connection_rate_per_sec=20.0,
+        failed_connection_ratio=0.85,
+    )
+
+    exf = ExfiltrationFeatures(
+        flow_count=10,
+        total_outbound_bytes=5000000,
+        outbound_bytes_per_sec=250000.0,
+        upload_download_ratio=150.0,
+        destination_count=2,
+        large_transfer_count=5,
+    )
+
+    ctx = DetectionContext(
+        source_entity="192.168.1.100",
+        timestamp_iso="2026-09-01T00:00:00Z",
+        feature_vector=fv,
+        recon_features=rf,
+        exfil_features=exf,
+    )
+
+    feat_matrix = FeatureVectorAdapter.context_to_features(ctx)
+    assert feat_matrix.shape == (1, 52)
+
+    # Check key mapped positions
+    idx_unique_dst_ports = EXPECTED_FEATURE_NAMES.index("unique_dst_ports")
+    idx_conn_rate = EXPECTED_FEATURE_NAMES.index("connection_attempt_rate")
+    idx_failed_ratio = EXPECTED_FEATURE_NAMES.index("failed_connection_ratio")
+    idx_outbound_bytes = EXPECTED_FEATURE_NAMES.index("outbound_bytes")
+    idx_up_down_ratio = EXPECTED_FEATURE_NAMES.index("upload_download_ratio")
+
+    assert feat_matrix[0, idx_unique_dst_ports] == 100.0
+    assert feat_matrix[0, idx_conn_rate] == 20.0
+    assert feat_matrix[0, idx_failed_ratio] == 0.85
+    assert feat_matrix[0, idx_outbound_bytes] == 5000000.0
+    assert feat_matrix[0, idx_up_down_ratio] == 150.0

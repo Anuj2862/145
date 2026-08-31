@@ -1,8 +1,8 @@
 {
   "manifest_version": "1.1.0",
   "schema_version": "1.0",
-  "created_at_iso": "2026-08-31T17:22:04.348432+00:00",
-  "updated_at_iso": "2026-08-31T17:22:04.348450+00:00",
+  "created_at_iso": "2026-08-31T19:04:08.558888+00:00",
+  "updated_at_iso": "2026-08-31T19:04:08.558911+00:00",
   "description": "UniGuard AI multi-scenario ground-truth evaluation manifest with decision boundary cases.",
   "captures": {
     "CAP-BENIGN-CORP-001": {
@@ -12,8 +12,8 @@
       "traffic_type": "BENIGN",
       "primary_label": "BENIGN",
       "capture_start_iso": "2025-09-01T00:00:00+00:00",
-      "capture_end_iso": "2025-09-01T00:04:59.016142+00:00",
-      "duration_sec": 299.02,
+      "capture_end_iso": "2025-09-01T00:05:02.024898+00:00",
+      "duration_sec": 302.02,
       "packet_count": 1500,
       "byte_count": null,
       "source_ips": [
@@ -143,8 +143,8 @@
       "traffic_type": "ATTACK",
       "primary_label": "BOTNET_C2_BEACONING",
       "capture_start_iso": "2025-09-01T01:23:20+00:00",
-      "capture_end_iso": "2025-09-01T01:33:17.707982+00:00",
-      "duration_sec": 597.71,
+      "capture_end_iso": "2025-09-01T01:33:21.073835+00:00",
+      "duration_sec": 601.07,
       "packet_count": 80,
       "byte_count": null,
       "source_ips": [
@@ -165,7 +165,7 @@
           "traffic_class": "BOTNET_C2_BEACONING",
           "time_window": {
             "start_time_iso": "2025-09-01T01:23:20+00:00",
-            "end_time_iso": "2025-09-01T01:33:17.707982+00:00",
+            "end_time_iso": "2025-09-01T01:33:21.073835+00:00",
             "start_offset_sec": null,
             "end_offset_sec": null
           },
@@ -191,8 +191,8 @@
       "traffic_type": "ATTACK",
       "primary_label": "BOTNET_C2_BEACONING",
       "capture_start_iso": "2025-09-01T01:23:20+00:00",
-      "capture_end_iso": "2025-09-01T01:32:37.131838+00:00",
-      "duration_sec": 557.13,
+      "capture_end_iso": "2025-09-01T01:33:25.763186+00:00",
+      "duration_sec": 605.76,
       "packet_count": 80,
       "byte_count": null,
       "source_ips": [
@@ -213,7 +213,7 @@
           "traffic_class": "BOTNET_C2_BEACONING",
           "time_window": {
             "start_time_iso": "2025-09-01T01:23:20+00:00",
-            "end_time_iso": "2025-09-01T01:32:37.131838+00:00",
+            "end_time_iso": "2025-09-01T01:33:25.763186+00:00",
             "start_offset_sec": null,
             "end_offset_sec": null
           },
@@ -375,6 +375,54 @@
         }
       ],
       "notes": "High entropy pseudo-random DNS lookups"
+    },
+    "CAP-ENC-MALWARE-001": {
+      "capture_id": "CAP-ENC-MALWARE-001",
+      "file_path": "dataset/pcaps/encrypted/tls_malware_c2_ja3_sus.pcap",
+      "file_sha256": null,
+      "traffic_type": "ATTACK",
+      "primary_label": "ENCRYPTED_MALWARE",
+      "capture_start_iso": "2025-09-01T06:56:40+00:00",
+      "capture_end_iso": "2025-09-01T06:57:40+00:00",
+      "duration_sec": 60.0,
+      "packet_count": 60,
+      "byte_count": null,
+      "source_ips": [
+        "10.0.9.33"
+      ],
+      "target_ips": [
+        "198.51.100.88"
+      ],
+      "protocols": [
+        6
+      ],
+      "generation_method": "SYNTHETIC_LAB",
+      "dataset_source": "UniGuard Isolated Testbed - Encrypted Malware TLS Handshake",
+      "split": "EVALUATION_HOLD_OUT",
+      "labeled_events": [
+        {
+          "event_id": "EVT-ENC-MALWARE-001",
+          "traffic_class": "ENCRYPTED_MALWARE",
+          "time_window": {
+            "start_time_iso": "2025-09-01T06:56:40+00:00",
+            "end_time_iso": "2025-09-01T06:57:40+00:00",
+            "start_offset_sec": null,
+            "end_offset_sec": null
+          },
+          "source_entity": "10.0.9.33",
+          "target_entity": "198.51.100.88",
+          "source_port": null,
+          "target_port": 443,
+          "protocol": 6,
+          "confidence_level": 1.0,
+          "observable_indicators": {
+            "tls_version": "TLS 1.2",
+            "ja3_match": true
+          },
+          "notes": null
+        }
+      ],
+      "notes": "TLS session metadata with suspicious handshake characteristics"
     }
   }
 }

@@ -120,11 +120,11 @@ class UnifiedM2Orchestrator:
                     ml_feats = self.ml_engine.validate_features(feature_matrix) if self.ml_engine else np.array(feature_matrix, dtype=np.float64).reshape(1, -1)
                 except Exception as exc:
                     feat_error = f"Feature matrix validation failed: {exc}"
-            elif ctx.feature_vector is not None:
+            elif ctx is not None:
                 try:
-                    ml_feats = FeatureVectorAdapter.feature_vector_to_features(ctx.feature_vector)
+                    ml_feats = FeatureVectorAdapter.context_to_features(ctx)
                 except Exception as exc:
-                    feat_error = f"FeatureVector conversion failed: {exc}"
+                    feat_error = f"Context feature conversion failed: {exc}"
 
             # 2a. LightGBM Primary Classifier
             if self.enable_ml:

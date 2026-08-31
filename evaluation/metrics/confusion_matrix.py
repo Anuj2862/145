@@ -193,9 +193,47 @@ class MultiClassConfusionMatrix:
             p95_idx = int(len(sorted_lat) * 0.95)
             p95_lat = round(sorted_lat[min(p95_idx, len(sorted_lat) - 1)], 2)
 
-        # Benign FPR
+        # Benign False Alarm Rate and Threat Miss Rate
         benign_res = self.get_class_metrics(EvaluationTrafficClass.BENIGN)
-        benign_fpr = round(benign_res.false_positive_rate, 4) if (benign_res.tested and benign_res.false_positive_rate is not None) else None
+        threat_miss_rate = round(benign_res.false_positive_rate, 4) if (benign_res.tested and benign_res.false_positive_rate is not None) else None
+        
+        # Benign False Alarm Rate: Benign windows predicted as any threat / Total Benign windows
+        benign_far = None
+        if benign_res.tested and benign_res.support > 0:
+            benign_far = round(benign_res.false_negatives / benign_res.support, 4)
+
+        # Binary Anomaly Evaluation: Ground Truth (BENIGN vs ATTACK) -> Prediction (NORMAL vs ANOMALY)
+        # Normal = Predicted BENIGN, Anomalous = Predicted ANY ATTACK / UNKNOWN_ANOMALY
+        ano_tp = sum(
+            self.matrix[gt][pred]
+            for gt in self.matrix if gt != EvaluationTrafficClass.BENIGN.value
+            for pred in self.matrix[gt] if pred != EvaluationTrafficClass.BENIGN.value
+        )
+        ano_fn = sum(
+            self.matrix[gt].get(EvaluationTrafficClass.BENIGN.value, 0)
+            for gt in self.matrix if gt != EvaluationTrafficClass.BENIGN.value
+        )
+        ano_fp = sum(
+            self.matrix.get(EvaluationTrafficClass.BENIGN.value, {}).get(pred, 0)
+            for pred in self.classes if pred != EvaluationTrafficClass.BENIGN.value
+        )
+        ano_tn = self.matrix.get(EvaluationTrafficClass.BENIGN.value, {}).get(EvaluationTrafficClass.BENIGN.value, 0)
+
+        ano_prec = (ano_tp / (ano_tp + ano_fp)) if (ano_tp + ano_fp) > 0 else None
+        ano_rec = (ano_tp / (ano_tp + ano_fn)) if (ano_tp + ano_fn) > 0 else None
+        ano_f1 = (2 * ano_prec * ano_rec / (ano_prec + ano_rec)) if (ano_prec and ano_rec and (ano_prec + ano_rec) > 0) else None
+        ano_far = (ano_fp / (ano_fp + ano_tn)) if (ano_fp + ano_tn) > 0 else None
+
+        binary_anomaly = {
+            "true_positives": ano_tp,
+            "false_positives": ano_fp,
+            "false_negatives": ano_fn,
+            "true_negatives": ano_tn,
+            "precision": round(ano_prec, 4) if ano_prec is not None else "N/A",
+            "recall": round(ano_rec, 4) if ano_rec is not None else "N/A",
+            "f1_score": round(ano_f1, 4) if ano_f1 is not None else "N/A",
+            "false_alarm_rate": round(ano_far, 4) if ano_far is not None else "N/A",
+        }
 
         total_decisions = sum(sum(row.values()) for row in self.matrix.values())
 
@@ -204,7 +242,10 @@ class MultiClassConfusionMatrix:
             "macro_precision": macro_prec if macro_prec is not None else "N/A",
             "macro_recall": macro_rec if macro_rec is not None else "N/A",
             "macro_f1": macro_f1 if macro_f1 is not None else "N/A",
-            "benign_false_positive_rate": benign_fpr if benign_fpr is not None else "N/A",
+            "benign_false_alarm_rate": benign_far if benign_far is not None else "N/A",
+            "threat_miss_rate": threat_miss_rate if threat_miss_rate is not None else "N/A",
+            "benign_false_positive_rate": threat_miss_rate if threat_miss_rate is not None else "N/A",
+            "binary_anomaly_evaluation": binary_anomaly,
             "latency_median_ms": median_lat if median_lat is not None else "N/A",
             "latency_p95_ms": p95_lat if p95_lat is not None else "N/A",
             "total_evaluations": total_decisions,
