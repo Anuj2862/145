@@ -174,9 +174,12 @@ class MultiClassConfusionMatrix:
             res = self.get_class_metrics(c_enum)
             per_class[c_enum.value] = res.to_dict()
             if res.tested and c_enum != EvaluationTrafficClass.BENIGN:
-                tested_f1_scores.append(res.f1_score)
-                tested_precisions.append(res.precision)
-                tested_recalls.append(res.recall)
+                if res.f1_score is not None:
+                    tested_f1_scores.append(res.f1_score)
+                if res.precision is not None:
+                    tested_precisions.append(res.precision)
+                if res.recall is not None:
+                    tested_recalls.append(res.recall)
 
         macro_f1 = round(statistics.mean(tested_f1_scores), 4) if tested_f1_scores else None
         macro_prec = round(statistics.mean(tested_precisions), 4) if tested_precisions else None

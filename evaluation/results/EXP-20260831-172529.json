@@ -1,0 +1,275 @@
+{
+  "experiment_id": "EXP-20260831-172529",
+  "timestamp_utc": "2026-08-31T17:25:50.401451+00:00",
+  "git_commit": "7990dc05c7833066b0f0209772d3349b1af1916d",
+  "manifest_file": "dataset/manifests/ground_truth.json",
+  "pipeline_config": {
+    "enable_ml": true,
+    "enable_baseline": true,
+    "artifact_dir": "models/artifacts"
+  },
+  "performance": {
+    "total_packets_processed": 22640,
+    "total_flows_tracked": 358,
+    "wall_clock_elapsed_sec": 20.4029,
+    "sustained_throughput_pps": 1109.6,
+    "sustained_throughput_fps": 17.5
+  },
+  "metrics": {
+    "evaluation_status": "COMPLETED",
+    "macro_precision": 0.0032,
+    "macro_recall": 0.2,
+    "macro_f1": 0.0127,
+    "benign_false_positive_rate": 0.0,
+    "latency_median_ms": 3.34,
+    "latency_p95_ms": 3.64,
+    "total_evaluations": 789,
+    "per_class_breakdown": {
+      "BENIGN": {
+        "traffic_class": "BENIGN",
+        "status": "TESTED",
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 724,
+        "true_negatives": 65,
+        "support": 724,
+        "precision": "N/A",
+        "recall": 0.0,
+        "f1_score": "N/A",
+        "false_positive_rate": 0.0
+      },
+      "VOLUMETRIC_DDOS": {
+        "traffic_class": "VOLUMETRIC_DDOS",
+        "status": "TESTED",
+        "true_positives": 5,
+        "false_positives": 780,
+        "false_negatives": 0,
+        "true_negatives": 4,
+        "support": 5,
+        "precision": 0.0064,
+        "recall": 1.0,
+        "f1_score": 0.0127,
+        "false_positive_rate": 0.9949
+      },
+      "BOTNET_C2_BEACONING": {
+        "traffic_class": "BOTNET_C2_BEACONING",
+        "status": "TESTED",
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 40,
+        "true_negatives": 749,
+        "support": 40,
+        "precision": "N/A",
+        "recall": 0.0,
+        "f1_score": "N/A",
+        "false_positive_rate": 0.0
+      },
+      "DGA_DNS_TUNNELLING": {
+        "traffic_class": "DGA_DNS_TUNNELLING",
+        "status": "TESTED",
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 10,
+        "true_negatives": 779,
+        "support": 10,
+        "precision": "N/A",
+        "recall": 0.0,
+        "f1_score": "N/A",
+        "false_positive_rate": 0.0
+      },
+      "ENCRYPTED_MALWARE": {
+        "traffic_class": "ENCRYPTED_MALWARE",
+        "status": "NOT_TESTED",
+        "reason": "Zero instances observed in evaluated captures"
+      },
+      "RECON_PORT_SCAN": {
+        "traffic_class": "RECON_PORT_SCAN",
+        "status": "TESTED",
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 5,
+        "true_negatives": 784,
+        "support": 5,
+        "precision": "N/A",
+        "recall": 0.0,
+        "f1_score": "N/A",
+        "false_positive_rate": 0.0
+      },
+      "DATA_EXFILTRATION": {
+        "traffic_class": "DATA_EXFILTRATION",
+        "status": "TESTED",
+        "true_positives": 0,
+        "false_positives": 0,
+        "false_negatives": 5,
+        "true_negatives": 784,
+        "support": 5,
+        "precision": "N/A",
+        "recall": 0.0,
+        "f1_score": "N/A",
+        "false_positive_rate": 0.0
+      },
+      "UNKNOWN_ANOMALY": {
+        "traffic_class": "UNKNOWN_ANOMALY",
+        "status": "TESTED",
+        "true_positives": 0,
+        "false_positives": 4,
+        "false_negatives": 0,
+        "true_negatives": 785,
+        "support": 0,
+        "precision": 0.0,
+        "recall": "N/A",
+        "f1_score": "N/A",
+        "false_positive_rate": 0.0051
+      }
+    },
+    "raw_confusion_matrix": {
+      "BENIGN": {
+        "BENIGN": 0,
+        "VOLUMETRIC_DDOS": 724,
+        "BOTNET_C2_BEACONING": 0,
+        "DGA_DNS_TUNNELLING": 0,
+        "ENCRYPTED_MALWARE": 0,
+        "RECON_PORT_SCAN": 0,
+        "DATA_EXFILTRATION": 0,
+        "UNKNOWN_ANOMALY": 0
+      },
+      "VOLUMETRIC_DDOS": {
+        "BENIGN": 0,
+        "VOLUMETRIC_DDOS": 5,
+        "BOTNET_C2_BEACONING": 0,
+        "DGA_DNS_TUNNELLING": 0,
+        "ENCRYPTED_MALWARE": 0,
+        "RECON_PORT_SCAN": 0,
+        "DATA_EXFILTRATION": 0,
+        "UNKNOWN_ANOMALY": 0
+      },
+      "BOTNET_C2_BEACONING": {
+        "BENIGN": 0,
+        "VOLUMETRIC_DDOS": 40,
+        "BOTNET_C2_BEACONING": 0,
+        "DGA_DNS_TUNNELLING": 0,
+        "ENCRYPTED_MALWARE": 0,
+        "RECON_PORT_SCAN": 0,
+        "DATA_EXFILTRATION": 0,
+        "UNKNOWN_ANOMALY": 0
+      },
+      "DGA_DNS_TUNNELLING": {
+        "BENIGN": 0,
+        "VOLUMETRIC_DDOS": 10,
+        "BOTNET_C2_BEACONING": 0,
+        "DGA_DNS_TUNNELLING": 0,
+        "ENCRYPTED_MALWARE": 0,
+        "RECON_PORT_SCAN": 0,
+        "DATA_EXFILTRATION": 0,
+        "UNKNOWN_ANOMALY": 0
+      },
+      "ENCRYPTED_MALWARE": {
+        "BENIGN": 0,
+        "VOLUMETRIC_DDOS": 0,
+        "BOTNET_C2_BEACONING": 0,
+        "DGA_DNS_TUNNELLING": 0,
+        "ENCRYPTED_MALWARE": 0,
+        "RECON_PORT_SCAN": 0,
+        "DATA_EXFILTRATION": 0,
+        "UNKNOWN_ANOMALY": 0
+      },
+      "RECON_PORT_SCAN": {
+        "BENIGN": 0,
+        "VOLUMETRIC_DDOS": 5,
+        "BOTNET_C2_BEACONING": 0,
+        "DGA_DNS_TUNNELLING": 0,
+        "ENCRYPTED_MALWARE": 0,
+        "RECON_PORT_SCAN": 0,
+        "DATA_EXFILTRATION": 0,
+        "UNKNOWN_ANOMALY": 0
+      },
+      "DATA_EXFILTRATION": {
+        "BENIGN": 0,
+        "VOLUMETRIC_DDOS": 1,
+        "BOTNET_C2_BEACONING": 0,
+        "DGA_DNS_TUNNELLING": 0,
+        "ENCRYPTED_MALWARE": 0,
+        "RECON_PORT_SCAN": 0,
+        "DATA_EXFILTRATION": 0,
+        "UNKNOWN_ANOMALY": 4
+      },
+      "UNKNOWN_ANOMALY": {
+        "BENIGN": 0,
+        "VOLUMETRIC_DDOS": 0,
+        "BOTNET_C2_BEACONING": 0,
+        "DGA_DNS_TUNNELLING": 0,
+        "ENCRYPTED_MALWARE": 0,
+        "RECON_PORT_SCAN": 0,
+        "DATA_EXFILTRATION": 0,
+        "UNKNOWN_ANOMALY": 0
+      }
+    }
+  },
+  "evaluated_captures": [
+    {
+      "capture_id": "CAP-BENIGN-CORP-001",
+      "file_path": "dataset/pcaps/benign/corp_workstation_baseline_01.pcap",
+      "primary_label": "BENIGN",
+      "packets_processed": 1500,
+      "flows_tracked": 150,
+      "signals_emitted": 2416
+    },
+    {
+      "capture_id": "CAP-DDOS-BOUND-001",
+      "file_path": "dataset/pcaps/ddos/ddos_syn_boundary_3kpps.pcap",
+      "primary_label": "VOLUMETRIC_DDOS",
+      "packets_processed": 10090,
+      "flows_tracked": 2,
+      "signals_emitted": 256
+    },
+    {
+      "capture_id": "CAP-DDOS-SYN-001",
+      "file_path": "dataset/pcaps/ddos/syn_flood_15kpps_burst.pcap",
+      "primary_label": "VOLUMETRIC_DDOS",
+      "packets_processed": 10090,
+      "flows_tracked": 2,
+      "signals_emitted": 244
+    },
+    {
+      "capture_id": "CAP-C2-BEACON-001",
+      "file_path": "dataset/pcaps/c2/c2_periodic_beacon_60s_jitter5.pcap",
+      "primary_label": "BOTNET_C2_BEACONING",
+      "packets_processed": 80,
+      "flows_tracked": 1,
+      "signals_emitted": 80
+    },
+    {
+      "capture_id": "CAP-C2-JITTER-002",
+      "file_path": "dataset/pcaps/c2/c2_periodic_beacon_30s_jitter50.pcap",
+      "primary_label": "BOTNET_C2_BEACONING",
+      "packets_processed": 80,
+      "flows_tracked": 2,
+      "signals_emitted": 80
+    },
+    {
+      "capture_id": "CAP-RECON-PORT-001",
+      "file_path": "dataset/pcaps/recon/horizontal_vertical_port_scan.pcap",
+      "primary_label": "RECON_PORT_SCAN",
+      "packets_processed": 100,
+      "flows_tracked": 100,
+      "signals_emitted": 20
+    },
+    {
+      "capture_id": "CAP-EXFIL-BULK-001",
+      "file_path": "dataset/pcaps/exfiltration/outbound_bulk_exfil_burst.pcap",
+      "primary_label": "DATA_EXFILTRATION",
+      "packets_processed": 500,
+      "flows_tracked": 1,
+      "signals_emitted": 24
+    },
+    {
+      "capture_id": "CAP-DNS-DGA-001",
+      "file_path": "dataset/pcaps/dns/dga_dns_tunnel_queries.pcap",
+      "primary_label": "DGA_DNS_TUNNELLING",
+      "packets_processed": 200,
+      "flows_tracked": 100,
+      "signals_emitted": 40
+    }
+  ],
+  "untested_captures": []
+}

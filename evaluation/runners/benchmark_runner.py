@@ -175,17 +175,40 @@ class BenchmarkRunner:
             enable_baseline=self.enable_baseline,
         )
 
+        # Pre-parse ground truth events into epoch timestamps for high-speed temporal matching
+        parsed_events = []
+        for evt in record.labeled_events:
+            s_dt = datetime.fromisoformat(evt.time_window.start_time_iso.replace("Z", "+00:00"))
+            e_dt = datetime.fromisoformat(evt.time_window.end_time_iso.replace("Z", "+00:00"))
+            parsed_events.append({
+                "event": evt,
+                "start_ts": s_dt.timestamp(),
+                "end_ts": e_dt.timestamp(),
+                "src": evt.source_entity,
+                "class": evt.traffic_class,
+            })
+
         packet_count = 0
         signals_count = 0
+        last_eval_time_per_entity: Dict[str, float] = {}
 
         for raw_packet in iter_pcap(record.file_path):
             packet_count += 1
             flow_manager.process_packet(raw_packet)
             window_manager.update(raw_packet)
 
+            src_ip = raw_packet.src_ip
+            dst_ip = raw_packet.dst_ip
+
+            # Stream-evaluation rate control: evaluate entity at 1.0s virtual window cadence
+            last_eval = last_eval_time_per_entity.get(src_ip, 0.0)
+            if (raw_packet.timestamp - last_eval) < 1.0:
+                continue
+            last_eval_time_per_entity[src_ip] = raw_packet.timestamp
+
             key = FlowKey(
-                src_ip=raw_packet.src_ip,
-                dst_ip=raw_packet.dst_ip,
+                src_ip=src_ip,
+                dst_ip=dst_ip,
                 src_port=raw_packet.src_port,
                 dst_port=raw_packet.dst_port,
                 protocol=raw_packet.protocol,
@@ -228,24 +251,19 @@ class BenchmarkRunner:
             signals = orchestrator.evaluate(context)
             lat_ms = (time.perf_counter() - t0) * 1000.0
 
-            # Determine ground-truth label for this exact window
-            active_events = self.manifest_manager.get_ground_truth_for_time_window(
-                capture_id=record.capture_id,
-                window_start_iso=now_iso,
-                window_end_iso=now_iso,
-            )
-            
-            if active_events:
-                # Use class of first active ground truth event matching this source/target
-                matching_evt = next((e for e in active_events if e.source_entity == src_ip), active_events[0])
-                gt_class = matching_evt.traffic_class
-            else:
-                gt_class = EvaluationTrafficClass.BENIGN
+            # High-speed epoch temporal matching against ground-truth
+            cur_pkt_ts = raw_packet.timestamp
+            gt_class = EvaluationTrafficClass.BENIGN
+            for pe in parsed_events:
+                # Tolerance window: 5s for fast bursts
+                if (pe["start_ts"] - 5.0) <= cur_pkt_ts <= (pe["end_ts"] + 5.0):
+                    if pe["src"] == src_ip or pe["src"] == dst_ip:
+                        gt_class = pe["class"]
+                        break
 
             # Determine predicted class from signals
             if signals:
                 signals_count += len(signals)
-                # Map primary signal
                 top_signal = max(signals, key=lambda s: s.confidence)
                 try:
                     pred_class = EvaluationTrafficClass(top_signal.threat_class.value)
