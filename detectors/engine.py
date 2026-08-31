@@ -158,9 +158,7 @@ class _DetectorWrapper:
                 )
 
             else:
-                # Future extensibility: attempt a generic evaluate(ctx) call.
-                # Future ML detectors (LightGBM, XGBoost, IsolationForest) can
-                # implement evaluate(ctx: DetectionContext) -> DetectionSignal.
+                # Generic evaluate(ctx) call
                 signal = d.evaluate(ctx)
 
             return DetectorResult(detector_name=self.name, signal=signal)

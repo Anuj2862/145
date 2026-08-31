@@ -51,11 +51,9 @@ class DDoSBaselineDetector:
                 syn_score = 0.5 * ((syn_ratio - self.SYN_RATIO_SUSPICIOUS) / 
                                   (self.SYN_RATIO_CRITICAL - self.SYN_RATIO_SUSPICIOUS))
                 score += syn_score
-                indicators["elevated_syn_ratio"] = syn_ratio
-
-        # Normalize score to [0.0, 1.0] just in case
+        # Normalize score to [0.0, 1.0]
         confidence = min(max(score, 0.0), 1.0)
-        
+
         # Determine Severity based on confidence
         if confidence >= 0.9:
             severity = Severity.CRITICAL

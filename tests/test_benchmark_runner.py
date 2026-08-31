@@ -166,6 +166,40 @@ class TestBenchmarkEngine(unittest.TestCase):
             self.assertEqual(len(results_files), 1)
             self.assertEqual(len(report_files), 1)
 
+    def test_ddos_no_detection_on_benign_traffic(self):
+        """Regression test: DDoSBaselineDetector must produce zero confidence (Severity.INFO) on benign low-velocity traffic."""
+        from detectors.ddos_detector import DDoSBaselineDetector
+        from schemas import FeatureVector, FlowFeatures, Severity
+
+        detector = DDoSBaselineDetector()
+        benign_fv = FeatureVector(
+            feature_id="fv-benign-test",
+            entity_ip="10.0.4.15",
+            timestamp_iso="2026-09-01T12:00:00Z",
+            flow_features=FlowFeatures(packets_per_sec=25.0, syn_ratio=0.02),
+        )
+        signal = detector.evaluate(benign_fv)
+        self.assertEqual(signal.confidence, 0.0)
+        self.assertEqual(signal.severity, Severity.INFO)
+
+    def test_ddos_detection_on_actual_flood(self):
+        """Verify DDoSBaselineDetector fires with high confidence on real flood traffic."""
+        from detectors.ddos_detector import DDoSBaselineDetector
+        from schemas import FeatureVector, FlowFeatures, ThreatClass
+
+        detector = DDoSBaselineDetector()
+        flood_fv = FeatureVector(
+            feature_id="fv-flood-test",
+            entity_ip="198.51.100.99",
+            flow_id="198.51.100.99:50000-10.0.0.1:80-6",
+            timestamp_iso="2026-09-01T12:00:00Z",
+            flow_features=FlowFeatures(packets_per_sec=15000.0, syn_ratio=0.99),
+        )
+        signal = detector.evaluate(flood_fv)
+        self.assertIsNotNone(signal)
+        self.assertEqual(signal.threat_class, ThreatClass.VOLUMETRIC_DDOS)
+        self.assertGreaterEqual(signal.confidence, 0.9)
+
 
 if __name__ == "__main__":
     unittest.main()
