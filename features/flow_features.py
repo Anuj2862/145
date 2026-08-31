@@ -1,14 +1,22 @@
+"""Flow feature extraction logic for UniGuard (Member 1 Streaming & Member 2 Event-based).
+
+Supports:
+  1. Streaming FlowState feature extraction (Member 1 pipeline) -> FlowFeatures dataclass
+  2. Batch FlowEvent feature extraction (Member 2 pipeline) -> schemas.FlowFeatures Pydantic model
+"""
+
 from dataclasses import asdict, dataclass
 from statistics import mean, pstdev
-from typing import Any
+from typing import Any, Optional, Union
 
+from schemas import FlowEvent, FlowFeatures as PydanticFlowFeatures
 from flow.flow_state import FlowState
 
 
 @dataclass(frozen=True)
 class FlowFeatures:
     """
-    Deterministic flow measurements derived from FlowState.
+    Deterministic flow measurements derived from FlowState (Member 1 streaming pipeline).
 
     Standard deviation fields use population standard deviation.
     """
@@ -51,41 +59,66 @@ class FlowFeatures:
         return asdict(self)
 
 
-def _sequence_min(values: tuple[int, ...] | tuple[float, ...]) -> float:
+def _sequence_min(values: Union[tuple[int, ...], tuple[float, ...]]) -> float:
     if not values:
         return 0.0
-
     return float(min(values))
 
 
-def _sequence_max(values: tuple[int, ...] | tuple[float, ...]) -> float:
+def _sequence_max(values: Union[tuple[int, ...], tuple[float, ...]]) -> float:
     if not values:
         return 0.0
-
     return float(max(values))
 
 
-def _sequence_mean(values: tuple[int, ...] | tuple[float, ...]) -> float:
+def _sequence_mean(values: Union[tuple[int, ...], tuple[float, ...]]) -> float:
     if not values:
         return 0.0
-
     return float(mean(values))
 
 
-def _sequence_std(values: tuple[int, ...] | tuple[float, ...]) -> float:
+def _sequence_std(values: Union[tuple[int, ...], tuple[float, ...]]) -> float:
     if len(values) < 2:
         return 0.0
-
     return float(pstdev(values))
 
 
-def extract_flow_features(
-    flow_state: FlowState,
-) -> FlowFeatures:
-    packet_lengths = tuple(flow_state.packet_lengths)
-    inter_arrival_times_ms = tuple(
-        flow_state.inter_arrival_times_ms
+def extract_flow_features_from_event(flow: FlowEvent) -> PydanticFlowFeatures:
+    """Extract flow velocity and cardinality features from a FlowEvent (Member 2)."""
+    duration = flow.duration_sec if flow.duration_sec > 0 else 1.0
+
+    packets_per_sec = float(flow.packet_count) / duration
+    bytes_per_sec = float(flow.byte_count) / duration
+
+    syn_ratio: Optional[float] = None
+    if flow.protocol == 6 and flow.tcp_flags is not None:
+        if flow.packet_count > 0:
+            syn_ratio = float(flow.tcp_flags.syn_count) / float(flow.packet_count)
+        else:
+            syn_ratio = 0.0
+
+    fan_out_dest_count = 1
+    dst_port_cardinality = 1
+
+    return PydanticFlowFeatures(
+        packets_per_sec=packets_per_sec,
+        bytes_per_sec=bytes_per_sec,
+        syn_ratio=syn_ratio,
+        fan_out_dest_count=fan_out_dest_count,
+        dst_port_cardinality=dst_port_cardinality,
     )
+
+
+def extract_flow_features(
+    flow_input: Union[FlowState, FlowEvent],
+) -> Union[FlowFeatures, PydanticFlowFeatures]:
+    """Polymorphic feature extractor supporting both FlowState (M1) and FlowEvent (M2)."""
+    if isinstance(flow_input, FlowEvent):
+        return extract_flow_features_from_event(flow_input)
+
+    flow_state = flow_input
+    packet_lengths = tuple(flow_state.packet_lengths)
+    inter_arrival_times_ms = tuple(flow_state.inter_arrival_times_ms)
 
     return FlowFeatures(
         protocol=flow_state.key.protocol,
