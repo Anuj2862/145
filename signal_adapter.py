@@ -11,6 +11,7 @@ SAFETY & INTEGRATION CONSTRAINTS:
 - Evaluates exfiltration direction relative to entity_ip (src=outbound, dst=inbound).
 - Evaluates detection strictly via UnifiedM2Orchestrator without premature signal fusion.
 - No modifications to shared Pydantic schemas or ML 52-feature contract.
+- Supports optional EntityContextManager for stateful multi-window retention without breaking single-batch callers.
 """
 
 from datetime import datetime, timezone
@@ -22,9 +23,11 @@ from schemas import (
     TCPFlags,
     DetectionSignal,
     FeatureVector,
+    FlowFeatures,
 )
 from features.recon_features import ReconFeatures, aggregate_recon_features
 from features.exfil_features import ExfiltrationFeatures, aggregate_exfil_features
+from features.entity_context import EntityContextManager
 from detectors.engine import DetectionContext
 from detectors.unified_detector import UnifiedM2Orchestrator
 
@@ -148,26 +151,35 @@ def batch_aggregate(
     window_start: Union[float, int, datetime],
     window_end: Union[float, int, datetime],
     min_flows_required: int = 3,
+    entity_manager: Optional[EntityContextManager] = None,
 ) -> Dict[str, Tuple[ReconFeatures, ExfiltrationFeatures]]:
     """Group flows by entity IP and aggregate window-level features for each entity.
 
-    An entity IP is any IP appearing as src_ip or dst_ip in the provided flows.
-    Exfiltration direction is evaluated relative to each entity_ip:
-    - src_ip == entity_ip -> outbound
-    - dst_ip == entity_ip -> inbound
-    - neither -> direction unavailable
+    If entity_manager is provided, state is updated and multi-window features are derived.
+    Otherwise, performs standard single-batch aggregation matching existing default behavior.
 
     Returns:
         Mapping of {entity_ip: (ReconFeatures, ExfiltrationFeatures)}
     """
+    t_start = _to_epoch_seconds(window_start)
+    t_end = _to_epoch_seconds(window_end)
+    window_duration_sec = t_end - t_start
+
+    if window_duration_sec <= 0:
+        raise ValueError(
+            f"Invalid window duration: {window_duration_sec}s. window_end must be greater than window_start."
+        )
+
+    if entity_manager is not None:
+        entity_manager.update(flows)
+        results: Dict[str, Tuple[ReconFeatures, ExfiltrationFeatures]] = {}
+        for entity_ip in sorted(entity_manager.entities.keys()):
+            rf = entity_manager.get_recon_features(entity_ip, window_duration_sec=window_duration_sec)
+            ef = entity_manager.get_exfil_features(entity_ip, window_duration_sec=window_duration_sec)
+            results[entity_ip] = (rf, ef)
+        return results
+
     if not flows:
-        t_start = _to_epoch_seconds(window_start)
-        t_end = _to_epoch_seconds(window_end)
-        window_duration_sec = t_end - t_start
-        if window_duration_sec <= 0:
-            raise ValueError(
-                f"Invalid window duration: {window_duration_sec}s. window_end must be greater than window_start."
-            )
         return {}
 
     # Extract all distinct entity IPs present in flows
@@ -220,25 +232,51 @@ def process_window_for_orchestrator(
     window_start: Union[float, int, datetime],
     window_end: Union[float, int, datetime],
     timestamp_iso: Optional[str] = None,
+    entity_manager: Optional[EntityContextManager] = None,
 ) -> List[DetectionSignal]:
     """Process a window of M1 FlowEvents through the adapter and orchestrator.
 
     Generates DetectionContext for each entity in the window and evaluates
     them strictly via UnifiedM2Orchestrator.evaluate().
     """
-    batch_res = batch_aggregate(flows, window_start, window_end)
+    t_start = _to_epoch_seconds(window_start)
+    t_end = _to_epoch_seconds(window_end)
+    window_duration_sec = t_end - t_start
+
+    batch_res = batch_aggregate(
+        flows=flows,
+        window_start=window_start,
+        window_end=window_end,
+        entity_manager=entity_manager,
+    )
     signals: List[DetectionSignal] = []
 
     for entity_ip, (recon_feats, exfil_feats) in batch_res.items():
-        entity_flows = [
-            f for f in flows if f.src_ip == entity_ip or f.dst_ip == entity_ip
-        ]
+        if entity_manager is not None:
+            temp_feats = entity_manager.get_temporal_features(entity_ip)
+            obs_count = entity_manager.get_observation_count(entity_ip)
+            fv = FeatureVector(
+                feature_id=f"fv-adapter-{entity_ip}",
+                entity_ip=entity_ip,
+                window_size_sec=max(1, int(window_duration_sec)),
+                timestamp_iso=timestamp_iso or _timestamp_iso(t_end),
+                flow_features=FlowFeatures(),
+                temporal_features=temp_feats,
+            )
+        else:
+            entity_flows = [
+                f for f in flows if f.src_ip == entity_ip or f.dst_ip == entity_ip
+            ]
+            obs_count = len(entity_flows)
+            fv = None
+
         ctx = create_detection_context(
             entity_ip=entity_ip,
             recon_feats=recon_feats,
             exfil_feats=exfil_feats,
-            observation_count=len(entity_flows),
+            observation_count=obs_count,
             timestamp_iso=timestamp_iso,
+            feature_vector=fv,
         )
         entity_signals = orchestrator.evaluate(ctx)
         signals.extend(entity_signals)
