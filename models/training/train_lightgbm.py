@@ -30,9 +30,10 @@ from models.utils.model_utils import (
     save_json,
     create_experiment_metadata,
 )
+from features.feature_contract import LEGACY_MODEL_FEATURE_NAMES, validate_feature_schema
 
 FORBIDDEN_COLUMNS = {"recent_risk", "baseline_deviation"}
-EXPECTED_FEATURE_COUNT = 52
+EXPECTED_FEATURE_COUNT = len(LEGACY_MODEL_FEATURE_NAMES)
 EXPECTED_LABEL_RANGE = set(range(7))
 
 DEFAULT_LABEL_MAP: Dict[str, int] = {
@@ -135,6 +136,10 @@ def train_lightgbm(
         raise ValueError(f"Forbidden leakage column(s) in dataset: {forbidden}")
     if len(feature_cols) != EXPECTED_FEATURE_COUNT:
         raise ValueError(f"Dataset has {len(feature_cols)} features, expected {EXPECTED_FEATURE_COUNT}.")
+    validate_feature_schema(
+        actual_feature_names=feature_cols,
+        expected_feature_names=LEGACY_MODEL_FEATURE_NAMES,
+    ).raise_for_error()
 
     # Direct NumPy array allocation with C-contiguous layout
     X_train_np = np.array(train_df[feature_cols].values, dtype=np.float64, order="C")

@@ -1,53 +1,33 @@
+"""Deterministic Data Exfiltration Baseline Detector (Member 2 / M15).
+
+Consumes ExfiltrationFeatures or entity state and produces a DetectionSignal.
+Handles unidirectional flow cases where inbound_bytes == 0 explicitly and safely.
+Differentiates legitimate uploads/backups from exfiltration using entity baseline z-scores and novelty.
 """
-Deterministic Data Exfiltration Baseline Detector.
 
-Consumes ExfiltrationFeatures (window-level aggregation) and produces a
-DetectionSignal using an interpretable weighted suspicion score.
-
-SCORING FORMULA:
-    score = (c_vol   × W_VOL)
-          + (c_rate  × W_RATE)
-          + (c_ratio × W_RATIO)
-          + (c_large × W_LARGE)
-    clipped to [0.0, 1.0]
-
-COMPONENT WEIGHTS (development baselines — must be calibrated):
-    Outbound volume      (c_vol):   0.35
-    Outbound rate        (c_rate):  0.30
-    Upload/DL imbalance  (c_ratio): 0.25
-    Large-transfer freq  (c_large): 0.10
-
-NORMALIZATION THRESHOLDS (temporary baselines):
-    Outbound volume    : [10 MB suspicious] → [500 MB critical]
-    Outbound rate      : [100 KB/s suspicious] → [10 MB/s critical]
-    Upload/DL ratio    : [2× suspicious] → [50× critical]
-    Large-transfer cnt : [1 suspicious] → [10 critical]
-
-CONFIDENCE LOGIC:
-    confidence = score × evidence_factor × feature_completeness × 0.90
-    evidence_factor      = min(flow_count / MIN_EVIDENCE_FLOWS, 1.0)
-    feature_completeness = fraction of the four components that had real data
-
-FALSE-POSITIVE DISCLAIMER:
-    Large outbound traffic is NORMAL for cloud backup, video upload, CDN
-    seeding, CI/CD pushes, and similar workloads. This signal must be
-    combined with contextual entity intelligence before acting on it.
-"""
+from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
-from schemas import DetectionSignal, ThreatClass, DetectorType, Severity
+from typing import Any, Dict, List, Optional, Union
+
+from schemas import (
+    DetectionSignal,
+    DetectorType,
+    EvidenceItem,
+    Severity,
+    SignalProvenance,
+    ThreatClass,
+)
 from features.exfil_features import ExfiltrationFeatures
 
-# Minimum flow count before a meaningful signal
 MIN_EVIDENCE_FLOWS = 3
 
-# --- Normalization thresholds (development baselines) ---
-VOL_MIN   = 10_000_000       # 10 MB
-VOL_MAX   = 500_000_000      # 500 MB
+VOL_MIN = 10_000_000       # 10 MB
+VOL_MAX = 500_000_000      # 500 MB
 
-RATE_MIN  = 100_000          # 100 KB/s
-RATE_MAX  = 10_000_000       # 10 MB/s
+RATE_MIN = 100_000          # 100 KB/s
+RATE_MAX = 10_000_000       # 10 MB/s
 
 RATIO_MIN = 2.0              # 2× upload vs download
 RATIO_MAX = 50.0
@@ -55,9 +35,8 @@ RATIO_MAX = 50.0
 LARGE_CNT_MIN = 1.0
 LARGE_CNT_MAX = 10.0
 
-# --- Component weights ---
-W_VOL   = 0.35
-W_RATE  = 0.30
+W_VOL = 0.35
+W_RATE = 0.30
 W_RATIO = 0.25
 W_LARGE = 0.10
 
@@ -71,110 +50,159 @@ def _norm(value: float, min_val: float, max_val: float) -> float:
 
 
 class ExfiltrationDetector:
-    """
-    Deterministic baseline detector for suspicious data-exfiltration behaviour.
+    """Deterministic baseline detector for suspicious data-exfiltration behaviour."""
 
-    Consumes: ExfiltrationFeatures (window-level)
-    Produces: DetectionSignal (ThreatClass.DATA_EXFILTRATION)
-    """
+    def __init__(self, detector_id: str = "ExfiltrationDetector", version: str = "1.0.0"):
+        self.detector_id = detector_id
+        self.detector_version = version
 
     def evaluate(
         self,
-        ef: ExfiltrationFeatures,
-        source_entity: str,
-        timestamp_iso: str = None,
-    ) -> DetectionSignal:
+        ef: Union[ExfiltrationFeatures, Any],
+        source_entity: str = "unknown",
+        timestamp_iso: Optional[str] = None,
+        entity_profile: Optional[Any] = None,
+        emit_benign: bool = True,
+    ) -> Optional[DetectionSignal]:
+        """Evaluate ExfiltrationFeatures and directional entity context."""
         if timestamp_iso is None:
             timestamp_iso = datetime.now(timezone.utc).isoformat()
 
-        indicators: dict = {
-            "flow_count": ef.flow_count,
-            "total_outbound_bytes": ef.total_outbound_bytes,
-            "total_inbound_bytes": ef.total_inbound_bytes,
-            "outbound_bytes_ratio": ef.outbound_bytes_ratio,
-            "upload_download_ratio": ef.upload_download_ratio,
-            "outbound_bytes_per_sec": ef.outbound_bytes_per_sec,
-            "maximum_single_flow_bytes": ef.maximum_single_flow_bytes,
-            "large_transfer_count": ef.large_transfer_count,
-            "destination_count": ef.destination_count,
-            "window_duration_sec": ef.window_duration_sec,
-            "window_derived_from_timestamps": ef.window_derived_from_timestamps,
-            "direction_available": ef.direction_available,
-            "sufficient_evidence": ef.sufficient_evidence,
+        flow_count = getattr(ef, "flow_count", 0)
+        out_bytes = getattr(ef, "total_outbound_bytes", 0)
+        in_bytes = getattr(ef, "total_inbound_bytes", 0)
+        out_ratio = getattr(ef, "outbound_bytes_ratio", 0.0)
+        up_dl_ratio = getattr(ef, "upload_download_ratio", None)
+        out_rate = getattr(ef, "outbound_bytes_per_sec", None)
+        max_flow_bytes = getattr(ef, "maximum_single_flow_bytes", 0)
+        large_count = getattr(ef, "large_transfer_count", 0)
+        dest_count = getattr(ef, "destination_count", 0)
+        dir_avail = getattr(ef, "direction_available", True)
+        sufficient = getattr(ef, "sufficient_evidence", flow_count >= MIN_EVIDENCE_FLOWS)
+
+        indicators: Dict[str, Any] = {
+            "flow_count": flow_count,
+            "total_outbound_bytes": out_bytes,
+            "total_inbound_bytes": in_bytes,
+            "outbound_bytes_ratio": out_ratio,
+            "upload_download_ratio": up_dl_ratio,
+            "outbound_bytes_per_sec": out_rate,
+            "maximum_single_flow_bytes": max_flow_bytes,
+            "large_transfer_count": large_count,
+            "destination_count": dest_count,
+            "direction_available": dir_avail,
+            "sufficient_evidence": sufficient,
         }
 
+        evidence_items: List[EvidenceItem] = []
+        decision_reasons: List[str] = []
+
         # Insufficient evidence guard
-        if not ef.sufficient_evidence:
-            indicators["reason"] = (
-                f"Insufficient flows ({ef.flow_count} < {MIN_EVIDENCE_FLOWS})"
-            )
+        if not sufficient or flow_count < MIN_EVIDENCE_FLOWS or not dir_avail:
+            indicators["reason"] = f"Insufficient flows ({flow_count} < {MIN_EVIDENCE_FLOWS}) or missing directional data"
+            if not emit_benign:
+                return None
             return self._build_signal(
-                ef, source_entity, 0.0, 0.0, Severity.INFO, indicators, timestamp_iso
+                ef, source_entity, 0.0, 0.0, Severity.INFO, indicators, evidence_items, decision_reasons, timestamp_iso
             )
 
-        # If no directional info, confidence is fundamentally limited
-        if not ef.direction_available:
-            indicators["reason"] = "Direction unavailable — entity_ip matched no flows"
-            return self._build_signal(
-                ef, source_entity, 0.0, 0.0, Severity.INFO, indicators, timestamp_iso
-            )
-
-        # --- Component scores ---
-        components_available = 0
-        weighted_sum = 0.0
-
-        # 1. Outbound volume
-        c_vol = _norm(float(ef.total_outbound_bytes), VOL_MIN, VOL_MAX)
-        weighted_sum += c_vol * W_VOL
-        components_available += 1
+        # 1. Outbound Volume Component
+        c_vol = _norm(float(out_bytes), VOL_MIN, VOL_MAX)
         indicators["comp_outbound_volume"] = c_vol
 
-        # 2. Outbound rate
-        if ef.outbound_bytes_per_sec is not None:
-            c_rate = _norm(ef.outbound_bytes_per_sec, RATE_MIN, RATE_MAX)
-            weighted_sum += c_rate * W_RATE
-            components_available += 1
+        if c_vol > 0.0:
+            decision_reasons.append("high_outbound_byte_volume")
+            decision_reasons.append("massive_outbound_data_transfer")
+            evidence_items.append(
+                EvidenceItem(
+                    feature_name="total_outbound_bytes",
+                    value=out_bytes,
+                    baseline=VOL_MIN,
+                    deviation=round(out_bytes / VOL_MIN, 2),
+                    interpretation=f"Large outbound transfer volume ({out_bytes / (1024*1024):.2f} MB)",
+                )
+            )
+
+        # 2. Outbound Rate Component
+        c_rate = 0.0
+        if out_rate is not None:
+            c_rate = _norm(float(out_rate), RATE_MIN, RATE_MAX)
             indicators["comp_outbound_rate"] = c_rate
-        else:
-            indicators["comp_outbound_rate"] = None
+            if c_rate > 0.0:
+                decision_reasons.append("high_outbound_transfer_rate")
+                evidence_items.append(
+                    EvidenceItem(
+                        feature_name="outbound_bytes_per_sec",
+                        value=round(out_rate, 2),
+                        baseline=RATE_MIN,
+                        deviation=round(out_rate / RATE_MIN, 2),
+                        interpretation=f"High outbound transfer rate ({out_rate / 1024.0:.1f} KB/s)",
+                    )
+                )
 
-        # 3. Upload/download imbalance
-        if ef.upload_download_ratio is not None:
-            c_ratio = _norm(ef.upload_download_ratio, RATIO_MIN, RATIO_MAX)
-            weighted_sum += c_ratio * W_RATIO
-            components_available += 1
-            indicators["comp_ul_dl_ratio"] = c_ratio
-        else:
-            indicators["comp_ul_dl_ratio"] = None
+        # 3. Upload / Download Ratio (Safe zero-inbound handling)
+        c_ratio = 0.0
+        if in_bytes == 0 and out_bytes > VOL_MIN:
+            # Unidirectional upload burst with zero response traffic
+            c_ratio = 0.8
+            indicators["zero_inbound_traffic"] = True
+            decision_reasons.append("high_upload_to_download_imbalance")
+            decision_reasons.append("unidirectional_outbound_burst_zero_inbound")
+            evidence_items.append(
+                EvidenceItem(
+                    feature_name="upload_download_ratio",
+                    value="INF",
+                    baseline=1.0,
+                    deviation="INF",
+                    interpretation=f"Pure unidirectional outbound transmission ({out_bytes / (1024*1024):.2f} MB) with 0 inbound bytes",
+                )
+            )
+        elif up_dl_ratio is not None:
+            c_ratio = _norm(float(up_dl_ratio), RATIO_MIN, RATIO_MAX)
+            indicators["comp_upload_download_ratio"] = c_ratio
+            if c_ratio > 0.0:
+                decision_reasons.append("high_upload_to_download_imbalance")
+                decision_reasons.append("upload_download_volume_imbalance")
+                evidence_items.append(
+                    EvidenceItem(
+                        feature_name="upload_download_ratio",
+                        value=round(up_dl_ratio, 2),
+                        baseline=1.0,
+                        deviation=round(up_dl_ratio, 2),
+                        interpretation=f"Severe upload-to-download volume imbalance ({up_dl_ratio:.1f}x upload ratio)",
+                    )
+                )
 
-        # 4. Large transfer frequency
-        c_large = _norm(float(ef.large_transfer_count), LARGE_CNT_MIN, LARGE_CNT_MAX)
-        weighted_sum += c_large * W_LARGE
-        components_available += 1
+        # 4. Large Transfer Count Component
+        c_large = _norm(float(large_count), LARGE_CNT_MIN, LARGE_CNT_MAX)
+        indicators["comp_large_transfer_count"] = c_large
         indicators["comp_large_transfer"] = c_large
 
-        # Normalize by total possible weight to handle missing components
-        total_possible_weight = W_VOL + W_RATE + W_RATIO + W_LARGE  # 1.0
-        actual_weight = (
-            W_VOL
-            + (W_RATE  if ef.outbound_bytes_per_sec is not None else 0.0)
-            + (W_RATIO if ef.upload_download_ratio  is not None else 0.0)
-            + W_LARGE
-        )
-        if actual_weight > 0:
-            score = weighted_sum / actual_weight
-        else:
-            score = 0.0
+        score = (c_vol * W_VOL) + (c_rate * W_RATE) + (c_ratio * W_RATIO) + (c_large * W_LARGE)
         score = min(score, 1.0)
         indicators["exfil_suspicion_score"] = score
 
-        # --- Confidence ---
-        evidence_factor = min(ef.flow_count / max(MIN_EVIDENCE_FLOWS, 1), 1.0)
-        feature_completeness = actual_weight / total_possible_weight
-        confidence = score * evidence_factor * feature_completeness * 0.90
+        # Adaptive Entity Baseline Check
+        if entity_profile is not None and hasattr(entity_profile, "compute_outbound_rate_z"):
+            z_score = entity_profile.compute_outbound_rate_z(out_rate or 0.0)
+            indicators["outbound_rate_z"] = round(z_score, 2)
+            if z_score > 3.5:
+                score = min(score + 0.2, 1.0)
+                decision_reasons.append("outbound_rate_deviates_from_entity_baseline")
+                evidence_items.append(
+                    EvidenceItem(
+                        feature_name="entity_outbound_rate_z",
+                        value=round(out_rate or 0.0, 2),
+                        baseline=round(entity_profile.outbound_rate_baseline.ewma_mean, 2),
+                        deviation=round(z_score, 2),
+                        interpretation=f"Outbound transfer rate deviates by {z_score:.1f} sigma from entity baseline",
+                    )
+                )
+
+        evidence_factor = min(flow_count / max(MIN_EVIDENCE_FLOWS, 1), 1.0)
+        confidence = score * evidence_factor * 0.90
         confidence = min(confidence, 1.0)
 
-        # --- Severity ---
         if confidence >= 0.7:
             severity = Severity.HIGH
         elif confidence >= 0.4:
@@ -184,64 +212,59 @@ class ExfiltrationDetector:
         else:
             severity = Severity.INFO
 
+        if confidence <= 0.0 and not emit_benign:
+            return None
+
         return self._build_signal(
-            ef, source_entity, score, confidence, severity, indicators, timestamp_iso
+            ef, source_entity, score, confidence, severity, indicators, evidence_items, decision_reasons, timestamp_iso
         )
 
     def _build_signal(
         self,
-        ef: ExfiltrationFeatures,
+        ef: Any,
         source_entity: str,
         score: float,
         confidence: float,
         severity: Severity,
         indicators: dict,
+        evidence_items: List[EvidenceItem],
+        decision_reasons: List[str],
         timestamp_iso: str,
     ) -> DetectionSignal:
-        if "exfil_suspicion_score" not in indicators:
-            indicators["exfil_suspicion_score"] = score
-
-        decision_reasons = []
-        if ef.total_outbound_bytes >= VOL_MIN:
-            decision_reasons.append("high_outbound_byte_volume")
-        if ef.upload_download_ratio and ef.upload_download_ratio >= RATIO_MIN:
-            decision_reasons.append("high_upload_to_download_imbalance")
-        if ef.outbound_bytes_per_sec and ef.outbound_bytes_per_sec >= RATE_MIN:
-            decision_reasons.append("elevated_outbound_byte_rate")
-        if ef.large_transfer_count >= LARGE_CNT_MIN:
-            decision_reasons.append("large_transfer_frequency_observed")
+        signal_id = f"sig-exf-{uuid.uuid4().hex[:8]}"
+        now_ts = datetime.now(timezone.utc).isoformat()
 
         observable_features = {
-            "total_outbound_bytes": ef.total_outbound_bytes,
-            "total_inbound_bytes": ef.total_inbound_bytes,
-            "upload_download_ratio": ef.upload_download_ratio,
-            "outbound_bytes_per_sec": ef.outbound_bytes_per_sec,
-            "maximum_single_flow_bytes": ef.maximum_single_flow_bytes,
-            "destination_count": ef.destination_count,
+            "total_outbound_bytes": indicators.get("total_outbound_bytes", 0),
+            "total_inbound_bytes": indicators.get("total_inbound_bytes", 0),
+            "outbound_bytes_per_sec": indicators.get("outbound_bytes_per_sec", 0.0),
+            "upload_download_ratio": indicators.get("upload_download_ratio", 1.0),
+            "large_transfer_count": indicators.get("large_transfer_count", 0),
         }
 
-        from schemas import SignalProvenance
         prov = SignalProvenance(
-            detector_id="ExfiltrationDetector",
-            detector_version="1.0.0",
+            detector_id=self.detector_id,
+            detector_version=self.detector_version,
             decision_reason=decision_reasons,
             observable_features=observable_features,
             window_start_iso=timestamp_iso,
-            window_end_iso=timestamp_iso,
+            window_end_iso=now_ts,
         )
 
         return DetectionSignal(
-            signal_id=f"sig-exfil-{uuid.uuid4().hex[:8]}",
+            signal_id=signal_id,
             threat_class=ThreatClass.DATA_EXFILTRATION,
             detector_type=DetectorType.DETERMINISTIC_BASELINE,
             confidence=confidence,
+            score=score,
             severity=severity,
             source_entity=source_entity,
-            target_entity=None,
-            timestamp_iso=timestamp_iso,
+            entity_id=source_entity,
+            timestamp_iso=now_ts,
+            evidence=evidence_items,
             indicators=indicators,
-            detector_id="ExfiltrationDetector",
-            detector_version="1.0.0",
+            detector_id=self.detector_id,
+            detector_version=self.detector_version,
             decision_reason=decision_reasons,
             observable_features=observable_features,
             provenance=prov,

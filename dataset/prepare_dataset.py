@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 
 from schemas import ThreatClass
+from features.feature_contract import LEGACY_MODEL_FEATURE_NAMES
 
 
 LABEL_MAPPING: Dict[str, Tuple[int, Optional[str]]] = {
@@ -40,42 +41,8 @@ LABEL_NAMES: List[str] = [
 # 36 clean numerical predictive feature columns derived from UniGuard architecture.
 # Note: recent_risk and baseline_deviation are explicitly EXCLUDED due to downstream risk leakage.
 NUMERICAL_FEATURE_COLUMNS: List[str] = [
-    "duration",
-    "total_packets",
-    "total_bytes",
-    "bytes_forward",
-    "bytes_backward",
-    "packets_per_sec",
-    "bytes_per_sec",
-    "packet_size_mean",
-    "iat_mean",
-    "iat_std",
-    "periodicity_score",
-    "jitter",
-    "burst_rate",
-    "dns_query_count",
-    "unique_domain_count",
-    "domain_length_mean",
-    "domain_entropy",
-    "ngram_score",
-    "dns_query_rate",
-    "session_resumption",
-    "tls_packet_size_mean",
-    "unique_dst_ips",
-    "unique_dst_ports",
-    "connection_attempt_rate",
-    "failed_connection_ratio",
-    "fan_out",
-    "outbound_bytes",
-    "outbound_rate",
-    "upload_download_ratio",
-    "destination_count",
-    "large_transfer_score",
-    "entity_flow_count_1m",
-    "entity_unique_destinations_1m",
-    "entity_new_destinations_5m",
-    "entity_avg_connection_interval",
-    "entity_periodicity",
+    name for name in LEGACY_MODEL_FEATURE_NAMES
+    if not name.startswith(("ja3_", "ja4_", "tls_version_"))
 ]
 
 CATEGORICAL_COLUMNS: List[str] = ["ja3", "ja4", "tls_version"]

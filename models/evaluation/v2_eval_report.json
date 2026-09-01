@@ -1,0 +1,580 @@
+{
+  "evaluation_timestamp": "2026-08-31T20:48:11.436829+00:00",
+  "feature_schema_version": "feature-schema-v2.1.0",
+  "feature_count": 56,
+  "E1_standard_lightgbm": {
+    "split_name": "E1_Standard_Test",
+    "sample_count": 18000,
+    "accuracy": 0.9705,
+    "macro_precision": 0.963,
+    "macro_recall": 0.9716,
+    "macro_f1": 0.9672,
+    "weighted_f1": 0.9709,
+    "fpr": 0.0303,
+    "fnr": 0.0208,
+    "brier_score": 0.0419,
+    "expected_calibration_error": 0.002,
+    "inference_latency_ms_per_sample": 0.0235,
+    "per_class": {
+      "BENIGN": {
+        "precision": 0.9827,
+        "recall": 0.9697,
+        "f1": 0.9762,
+        "support": 9880
+      },
+      "VOLUMETRIC_DDOS": {
+        "precision": 0.9994,
+        "recall": 1.0,
+        "f1": 0.9997,
+        "support": 1617
+      },
+      "BOTNET_C2_BEACONING": {
+        "precision": 0.9665,
+        "recall": 0.9981,
+        "f1": 0.9821,
+        "support": 1590
+      },
+      "DGA_DNS_TUNNELLING": {
+        "precision": 0.9993,
+        "recall": 0.9987,
+        "f1": 0.999,
+        "support": 1532
+      },
+      "ENCRYPTED_MALWARE": {
+        "precision": 0.7964,
+        "recall": 0.8436,
+        "f1": 0.8193,
+        "support": 1400
+      },
+      "RECON_PORT_SCAN": {
+        "precision": 0.9991,
+        "recall": 1.0,
+        "f1": 0.9995,
+        "support": 1071
+      },
+      "DATA_EXFILTRATION": {
+        "precision": 0.9978,
+        "recall": 0.9912,
+        "f1": 0.9945,
+        "support": 910
+      }
+    },
+    "confusion_matrix": [
+      [
+        9581,
+        0,
+        0,
+        0,
+        298,
+        0,
+        1
+      ],
+      [
+        0,
+        1617,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        1587,
+        0,
+        3,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        1,
+        1530,
+        0,
+        1,
+        0
+      ],
+      [
+        164,
+        1,
+        52,
+        1,
+        1181,
+        0,
+        1
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1071,
+        0
+      ],
+      [
+        5,
+        0,
+        2,
+        0,
+        1,
+        0,
+        902
+      ]
+    ]
+  },
+  "E1_standard_random_forest": {
+    "split_name": "E1_RandomForest_Baseline",
+    "sample_count": 18000,
+    "accuracy": 0.9574,
+    "macro_precision": 0.9456,
+    "macro_recall": 0.9809,
+    "macro_f1": 0.9592,
+    "weighted_f1": 0.9606,
+    "fpr": 0.0689,
+    "fnr": 0.0023,
+    "brier_score": 0.0756,
+    "expected_calibration_error": 0.0816,
+    "inference_latency_ms_per_sample": 0.0052,
+    "per_class": {
+      "BENIGN": {
+        "precision": 0.9979,
+        "recall": 0.9311,
+        "f1": 0.9633,
+        "support": 9880
+      },
+      "VOLUMETRIC_DDOS": {
+        "precision": 0.9988,
+        "recall": 1.0,
+        "f1": 0.9994,
+        "support": 1617
+      },
+      "BOTNET_C2_BEACONING": {
+        "precision": 0.9664,
+        "recall": 0.9937,
+        "f1": 0.9798,
+        "support": 1590
+      },
+      "DGA_DNS_TUNNELLING": {
+        "precision": 0.9987,
+        "recall": 1.0,
+        "f1": 0.9993,
+        "support": 1532
+      },
+      "ENCRYPTED_MALWARE": {
+        "precision": 0.6617,
+        "recall": 0.9557,
+        "f1": 0.782,
+        "support": 1400
+      },
+      "RECON_PORT_SCAN": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 1071
+      },
+      "DATA_EXFILTRATION": {
+        "precision": 0.9956,
+        "recall": 0.9857,
+        "f1": 0.9906,
+        "support": 910
+      }
+    },
+    "confusion_matrix": [
+      [
+        9199,
+        0,
+        3,
+        0,
+        676,
+        0,
+        2
+      ],
+      [
+        0,
+        1617,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        1580,
+        1,
+        7,
+        0,
+        1
+      ],
+      [
+        0,
+        0,
+        0,
+        1532,
+        0,
+        0,
+        0
+      ],
+      [
+        9,
+        1,
+        50,
+        1,
+        1338,
+        0,
+        1
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1071,
+        0
+      ],
+      [
+        10,
+        0,
+        2,
+        0,
+        1,
+        0,
+        897
+      ]
+    ]
+  },
+  "E2_true_entity_holdout": {
+    "split_name": "E2_True_Entity_Holdout",
+    "sample_count": 17899,
+    "accuracy": 0.9694,
+    "macro_precision": 0.9637,
+    "macro_recall": 0.9683,
+    "macro_f1": 0.9659,
+    "weighted_f1": 0.9695,
+    "fpr": 0.0283,
+    "fnr": 0.0255,
+    "brier_score": 0.0438,
+    "expected_calibration_error": 0.0024,
+    "inference_latency_ms_per_sample": 0.0051,
+    "per_class": {
+      "BENIGN": {
+        "precision": 0.9787,
+        "recall": 0.9717,
+        "f1": 0.9752,
+        "support": 9793
+      },
+      "VOLUMETRIC_DDOS": {
+        "precision": 0.9994,
+        "recall": 1.0,
+        "f1": 0.9997,
+        "support": 1636
+      },
+      "BOTNET_C2_BEACONING": {
+        "precision": 0.9655,
+        "recall": 0.9974,
+        "f1": 0.9812,
+        "support": 1514
+      },
+      "DGA_DNS_TUNNELLING": {
+        "precision": 0.9986,
+        "recall": 1.0,
+        "f1": 0.9993,
+        "support": 1475
+      },
+      "ENCRYPTED_MALWARE": {
+        "precision": 0.8085,
+        "recall": 0.8221,
+        "f1": 0.8152,
+        "support": 1433
+      },
+      "RECON_PORT_SCAN": {
+        "precision": 0.9974,
+        "recall": 1.0,
+        "f1": 0.9987,
+        "support": 1136
+      },
+      "DATA_EXFILTRATION": {
+        "precision": 0.9978,
+        "recall": 0.9868,
+        "f1": 0.9923,
+        "support": 912
+      }
+    },
+    "confusion_matrix": [
+      [
+        9516,
+        0,
+        0,
+        0,
+        276,
+        0,
+        1
+      ],
+      [
+        0,
+        1636,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        1510,
+        0,
+        3,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        1475,
+        0,
+        0,
+        0
+      ],
+      [
+        200,
+        1,
+        51,
+        1,
+        1178,
+        1,
+        1
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1136,
+        0
+      ],
+      [
+        7,
+        0,
+        3,
+        1,
+        0,
+        1,
+        900
+      ]
+    ]
+  },
+  "E3_scenario_holdout": {
+    "split_name": "E3_Scenario_Holdout",
+    "status": "NOT_AVAILABLE",
+    "reason": "Insufficient scenario diversity in benchmark dataset (single scenario ID). Scenario holdout must not report fabricated generalization metrics.",
+    "accuracy": null,
+    "macro_f1": null
+  },
+  "E4_true_temporal_holdout": {
+    "split_name": "E4_True_Temporal_Holdout",
+    "sample_count": 18000,
+    "accuracy": 0.9663,
+    "macro_precision": 0.9642,
+    "macro_recall": 0.9601,
+    "macro_f1": 0.962,
+    "weighted_f1": 0.9661,
+    "fpr": 0.0259,
+    "fnr": 0.0337,
+    "brier_score": 0.0496,
+    "expected_calibration_error": 0.0038,
+    "inference_latency_ms_per_sample": 0.0046,
+    "per_class": {
+      "BENIGN": {
+        "precision": 0.9721,
+        "recall": 0.9741,
+        "f1": 0.9731,
+        "support": 9845
+      },
+      "VOLUMETRIC_DDOS": {
+        "precision": 0.995,
+        "recall": 1.0,
+        "f1": 0.9975,
+        "support": 1588
+      },
+      "BOTNET_C2_BEACONING": {
+        "precision": 0.9671,
+        "recall": 0.9981,
+        "f1": 0.9824,
+        "support": 1618
+      },
+      "DGA_DNS_TUNNELLING": {
+        "precision": 0.9959,
+        "recall": 1.0,
+        "f1": 0.9979,
+        "support": 1444
+      },
+      "ENCRYPTED_MALWARE": {
+        "precision": 0.8257,
+        "recall": 0.8044,
+        "f1": 0.8149,
+        "support": 1508
+      },
+      "RECON_PORT_SCAN": {
+        "precision": 0.9962,
+        "recall": 1.0,
+        "f1": 0.9981,
+        "support": 1055
+      },
+      "DATA_EXFILTRATION": {
+        "precision": 0.9978,
+        "recall": 0.9437,
+        "f1": 0.97,
+        "support": 942
+      }
+    },
+    "confusion_matrix": [
+      [
+        9590,
+        1,
+        1,
+        0,
+        253,
+        0,
+        0
+      ],
+      [
+        0,
+        1588,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        1615,
+        0,
+        1,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        1444,
+        0,
+        0,
+        0
+      ],
+      [
+        240,
+        2,
+        49,
+        1,
+        1213,
+        1,
+        2
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1055,
+        0
+      ],
+      [
+        35,
+        4,
+        5,
+        5,
+        2,
+        2,
+        889
+      ]
+    ]
+  },
+  "ablation_study": {
+    "A0_Flow_Only": {
+      "feature_count": 19,
+      "accuracy": 0.2169,
+      "macro_precision": 0.2866,
+      "macro_recall": 0.2896,
+      "macro_f1": 0.249,
+      "fpr": 0.8883,
+      "latency_ms": 0.0047
+    },
+    "A1_Flow_DNS": {
+      "feature_count": 30,
+      "accuracy": 0.3275,
+      "macro_precision": 0.4306,
+      "macro_recall": 0.4292,
+      "macro_f1": 0.3923,
+      "fpr": 0.8241,
+      "latency_ms": 0.0053
+    },
+    "A2_Flow_DNS_TLS": {
+      "feature_count": 36,
+      "accuracy": 0.3404,
+      "macro_precision": 0.4502,
+      "macro_recall": 0.4887,
+      "macro_f1": 0.4087,
+      "fpr": 0.8695,
+      "latency_ms": 0.0052
+    },
+    "A3_Flow_DNS_TLS_Temporal": {
+      "feature_count": 45,
+      "accuracy": 0.5618,
+      "macro_precision": 0.6556,
+      "macro_recall": 0.6962,
+      "macro_f1": 0.6412,
+      "fpr": 0.6481,
+      "latency_ms": 0.0042
+    },
+    "A4_A3_Entity": {
+      "feature_count": 47,
+      "accuracy": 0.5531,
+      "macro_precision": 0.6556,
+      "macro_recall": 0.695,
+      "macro_f1": 0.6383,
+      "fpr": 0.6643,
+      "latency_ms": 0.0043
+    },
+    "A5_Full_Multimodal_V2": {
+      "feature_count": 56,
+      "accuracy": 0.9594,
+      "macro_precision": 0.9473,
+      "macro_recall": 0.982,
+      "macro_f1": 0.9611,
+      "fpr": 0.0655,
+      "latency_ms": 0.0046
+    }
+  },
+  "legacy_vs_native_v2_comparison": {
+    "legacy_52_model": {
+      "model_version": "m12-legacy",
+      "feature_schema": "legacy-52-v1",
+      "feature_count": 52,
+      "test_macro_f1": 0.938,
+      "test_accuracy": 0.941,
+      "brier_score": 0.034,
+      "ece": 0.012
+    },
+    "native_v2_model": {
+      "model_version": "2.1.0",
+      "feature_schema": "feature-schema-v2.1.0",
+      "feature_count": 56,
+      "test_macro_f1": 0.9672,
+      "test_accuracy": 0.9705,
+      "brier_score": 0.0419,
+      "ece": 0.002
+    }
+  }
+}

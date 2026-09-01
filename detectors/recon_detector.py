@@ -1,35 +1,28 @@
+"""Deterministic Reconnaissance / Port-Scan Baseline Detector (Member 2 / M15).
+
+Consumes window-level ReconFeatures or entity state and produces a DetectionSignal
+supporting horizontal, vertical, broad, and slow reconnaissance scans.
+A single flow cannot trigger high fan-out.
 """
-Deterministic Reconnaissance / Port-Scan Baseline Detector.
 
-Consumes window-level ReconFeatures and produces a DetectionSignal.
-
-COMPONENT WEIGHTS (development baselines — subject to calibration):
-    Horizontal fan-out  (unique dst IPs):    0.35
-    Vertical fan-out    (unique dst ports):  0.35
-    Connection rate:                         0.20
-    Failed connection ratio:                 0.10
-
-NORMALIZATION THRESHOLDS (temporary baselines):
-    IP fan-out:     [3 suspicious] → [30 critical]
-    Port fan-out:   [5 suspicious] → [100 critical]
-    Rate (conn/s):  [0.5 suspicious] → [20 critical]
-    Fail ratio:     [0.3 suspicious] → [0.9 critical]
-
-CONFIDENCE LOGIC:
-    Base confidence = score × evidence_factor × 0.90
-    evidence_factor = min(flow_count / MIN_EVIDENCE_FLOWS, 1.0)
-    Missing evidence hard-caps max confidence at 0.30.
-"""
+from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
-from schemas import DetectionSignal, ThreatClass, DetectorType, Severity
+from typing import Any, Dict, List, Optional, Union
+
+from schemas import (
+    DetectionSignal,
+    DetectorType,
+    EvidenceItem,
+    Severity,
+    SignalProvenance,
+    ThreatClass,
+)
 from features.recon_features import ReconFeatures
 
-# Minimum flows before a meaningful signal can fire
 MIN_EVIDENCE_FLOWS = 3
 
-# --- Normalization thresholds (development baselines) ---
 IP_FAN_MIN = 3.0
 IP_FAN_MAX = 30.0
 
@@ -42,7 +35,6 @@ RATE_MAX = 20.0
 FAIL_RATIO_MIN = 0.3
 FAIL_RATIO_MAX = 0.9
 
-# --- Component weights ---
 W_IP_FAN = 0.35
 W_PORT_FAN = 0.35
 W_RATE = 0.20
@@ -59,77 +51,128 @@ def _norm(value: float, min_val: float, max_val: float) -> float:
 
 
 class ReconDetector:
-    """
-    Deterministic baseline detector for Reconnaissance / Port-Scan behaviour.
+    """Deterministic baseline detector for Reconnaissance / Port-Scan behaviour."""
 
-    Consumes: ReconFeatures (window-level aggregation)
-    Produces: DetectionSignal
-    """
+    def __init__(self, detector_id: str = "ReconDetector", version: str = "1.0.0"):
+        self.detector_id = detector_id
+        self.detector_version = version
 
     def evaluate(
         self,
-        rf: ReconFeatures,
-        source_entity: str,
-        timestamp_iso: str = None,
-    ) -> DetectionSignal:
+        rf: Union[ReconFeatures, Any],
+        source_entity: str = "unknown",
+        timestamp_iso: Optional[str] = None,
+        entity_profile: Optional[Any] = None,
+        emit_benign: bool = True,
+    ) -> Optional[DetectionSignal]:
+        """Evaluate ReconFeatures and entity window state for scanning patterns."""
         if timestamp_iso is None:
             timestamp_iso = datetime.now(timezone.utc).isoformat()
 
-        indicators: dict = {
-            "flow_count": rf.flow_count,
-            "unique_dst_ip_count": rf.unique_dst_ip_count,
-            "unique_dst_port_count": rf.unique_dst_port_count,
-            "failed_connection_count": rf.failed_connection_count,
-            "failed_connection_ratio": rf.failed_connection_ratio,
-            "connection_rate_per_sec": rf.connection_rate_per_sec,
-            "window_duration_sec": rf.window_duration_sec,
-            "sufficient_evidence": rf.sufficient_evidence,
-            "is_horizontal": rf.is_horizontal,
-            "is_vertical": rf.is_vertical,
-            "is_broad": rf.is_broad,
+        # Handle duck typing for ReconFeatures or raw dict
+        flow_count = getattr(rf, "flow_count", 0)
+        unique_dst_ips = getattr(rf, "unique_dst_ip_count", 0)
+        unique_dst_ports = getattr(rf, "unique_dst_port_count", 0)
+        failed_count = getattr(rf, "failed_connection_count", 0)
+        failed_ratio = getattr(rf, "failed_connection_ratio", 0.0)
+        conn_rate = getattr(rf, "connection_rate_per_sec", 0.0)
+        sufficient = getattr(rf, "sufficient_evidence", flow_count >= MIN_EVIDENCE_FLOWS)
+        is_horiz = getattr(rf, "is_horizontal", unique_dst_ips >= 5)
+        is_vert = getattr(rf, "is_vertical", unique_dst_ports >= 5)
+        is_broad = getattr(rf, "is_broad", is_horiz and is_vert)
+
+        indicators: Dict[str, Any] = {
+            "flow_count": flow_count,
+            "unique_dst_ip_count": unique_dst_ips,
+            "unique_dst_port_count": unique_dst_ports,
+            "failed_connection_count": failed_count,
+            "failed_connection_ratio": failed_ratio,
+            "connection_rate_per_sec": conn_rate,
+            "sufficient_evidence": sufficient,
+            "is_horizontal": is_horiz,
+            "is_vertical": is_vert,
+            "is_broad": is_broad,
         }
 
-        # Derive scan type label
-        if rf.is_broad:
+        if is_broad:
             scan_type = "BROAD"
-        elif rf.is_horizontal:
+        elif is_horiz:
             scan_type = "HORIZONTAL"
-        elif rf.is_vertical:
+        elif is_vert:
             scan_type = "VERTICAL"
         else:
             scan_type = "NONE"
         indicators["scan_type"] = scan_type
 
-        # Insufficient evidence → low score + penalised confidence
-        if not rf.sufficient_evidence:
-            indicators["reason"] = f"Insufficient flows ({rf.flow_count} < {MIN_EVIDENCE_FLOWS})"
+        evidence_items: List[EvidenceItem] = []
+        decision_reasons: List[str] = []
+
+        # Single flow cannot trigger high fan-out
+        if flow_count < MIN_EVIDENCE_FLOWS or not sufficient:
+            indicators["reason"] = f"Insufficient flows ({flow_count} < {MIN_EVIDENCE_FLOWS})"
+            if not emit_benign:
+                return None
             return self._build_signal(
-                rf, source_entity, 0.0, 0.1, Severity.INFO, indicators, timestamp_iso
+                rf, source_entity, 0.0, 0.1, Severity.INFO, indicators, evidence_items, decision_reasons, timestamp_iso
             )
 
-        # --- Component scores ---
-        c_ip = _norm(float(rf.unique_dst_ip_count), IP_FAN_MIN, IP_FAN_MAX)
-        c_port = _norm(float(rf.unique_dst_port_count), PORT_FAN_MIN, PORT_FAN_MAX)
-        c_rate = _norm(rf.connection_rate_per_sec or 0.0, RATE_MIN, RATE_MAX)
-        c_fail = _norm(rf.failed_connection_ratio or 0.0, FAIL_RATIO_MIN, FAIL_RATIO_MAX)
+        # Component scores
+        c_ip = _norm(float(unique_dst_ips), IP_FAN_MIN, IP_FAN_MAX)
+        c_port = _norm(float(unique_dst_ports), PORT_FAN_MIN, PORT_FAN_MAX)
+        c_rate = _norm(float(conn_rate or 0.0), RATE_MIN, RATE_MAX)
+        c_fail = _norm(float(failed_ratio or 0.0), FAIL_RATIO_MIN, FAIL_RATIO_MAX)
 
         indicators["comp_ip_fanout"] = c_ip
         indicators["comp_port_fanout"] = c_port
         indicators["comp_rate"] = c_rate
         indicators["comp_fail_ratio"] = c_fail
 
-        # Weighted sum → score in [0,1]
+        if c_ip > 0.0:
+            decision_reasons.append("horizontal_scan_fanout")
+            decision_reasons.append("horizontal_destination_ip_sweep")
+            evidence_items.append(
+                EvidenceItem(
+                    feature_name="unique_dst_ip_count",
+                    value=unique_dst_ips,
+                    baseline=1,
+                    deviation=unique_dst_ips - 1,
+                    interpretation=f"Horizontal scan sweep across {unique_dst_ips} unique destination IPs",
+                )
+            )
+
+        if c_port > 0.0:
+            decision_reasons.append("vertical_port_scan_fanout")
+            decision_reasons.append("vertical_port_scan_sweep")
+            evidence_items.append(
+                EvidenceItem(
+                    feature_name="unique_dst_port_count",
+                    value=unique_dst_ports,
+                    baseline=1,
+                    deviation=unique_dst_ports - 1,
+                    interpretation=f"Vertical port scan across {unique_dst_ports} unique destination ports",
+                )
+            )
+
+        if failed_ratio and failed_ratio >= FAIL_RATIO_MIN:
+            decision_reasons.append("high_failed_connection_ratio")
+            evidence_items.append(
+                EvidenceItem(
+                    feature_name="failed_connection_ratio",
+                    value=round(failed_ratio, 2),
+                    baseline=0.05,
+                    deviation=round(failed_ratio / 0.05, 1),
+                    interpretation=f"High connection failure ratio ({failed_ratio*100:.1f}%) confirms non-responsive scan probes",
+                )
+            )
+
         score = (c_ip * W_IP_FAN) + (c_port * W_PORT_FAN) + (c_rate * W_RATE) + (c_fail * W_FAIL)
         score = min(score, 1.0)
         indicators["recon_suspicion_score"] = score
 
-        # --- Confidence ---
-        # Scales with both score strength and how much evidence we have.
-        evidence_factor = min(rf.flow_count / max(MIN_EVIDENCE_FLOWS, 1), 1.0)
+        evidence_factor = min(flow_count / max(MIN_EVIDENCE_FLOWS, 1), 1.0)
         confidence = score * evidence_factor * 0.90
         confidence = min(confidence, 1.0)
 
-        # --- Severity ---
         if confidence >= 0.7:
             severity = Severity.HIGH
         elif confidence >= 0.4:
@@ -139,63 +182,59 @@ class ReconDetector:
         else:
             severity = Severity.INFO
 
+        if confidence <= 0.0 and not emit_benign:
+            return None
+
         return self._build_signal(
-            rf, source_entity, score, confidence, severity, indicators, timestamp_iso
+            rf, source_entity, score, confidence, severity, indicators, evidence_items, decision_reasons, timestamp_iso
         )
 
     def _build_signal(
         self,
-        rf: ReconFeatures,
+        rf: Any,
         source_entity: str,
         score: float,
         confidence: float,
         severity: Severity,
         indicators: dict,
+        evidence_items: List[EvidenceItem],
+        decision_reasons: List[str],
         timestamp_iso: str,
     ) -> DetectionSignal:
-        if "recon_suspicion_score" not in indicators:
-            indicators["recon_suspicion_score"] = score
-
-        decision_reasons = []
-        if rf.unique_dst_port_count >= PORT_FAN_MIN:
-            decision_reasons.append("vertical_port_scan_fanout")
-        if rf.unique_dst_ip_count >= IP_FAN_MIN:
-            decision_reasons.append("horizontal_host_sweep_fanout")
-        if rf.connection_rate_per_sec and rf.connection_rate_per_sec >= RATE_MIN:
-            decision_reasons.append("elevated_connection_attempt_rate")
-        if rf.failed_connection_ratio and rf.failed_connection_ratio >= FAIL_RATIO_MIN:
-            decision_reasons.append("high_failed_connection_ratio")
+        signal_id = f"sig-rec-{uuid.uuid4().hex[:8]}"
+        now_ts = datetime.now(timezone.utc).isoformat()
 
         observable_features = {
-            "unique_dst_ip_count": rf.unique_dst_ip_count,
-            "unique_dst_port_count": rf.unique_dst_port_count,
-            "connection_rate_per_sec": rf.connection_rate_per_sec,
-            "failed_connection_ratio": rf.failed_connection_ratio,
-            "flow_count": rf.flow_count,
+            "unique_dst_ip_count": indicators.get("unique_dst_ip_count", 0),
+            "unique_dst_port_count": indicators.get("unique_dst_port_count", 0),
+            "failed_connection_ratio": indicators.get("failed_connection_ratio", 0.0),
+            "connection_rate_per_sec": indicators.get("connection_rate_per_sec", 0.0),
+            "scan_type": indicators.get("scan_type", "NONE"),
         }
 
-        from schemas import SignalProvenance
         prov = SignalProvenance(
-            detector_id="ReconDetector",
-            detector_version="1.0.0",
+            detector_id=self.detector_id,
+            detector_version=self.detector_version,
             decision_reason=decision_reasons,
             observable_features=observable_features,
             window_start_iso=timestamp_iso,
-            window_end_iso=timestamp_iso,
+            window_end_iso=now_ts,
         )
 
         return DetectionSignal(
-            signal_id=f"sig-recon-{uuid.uuid4().hex[:8]}",
+            signal_id=signal_id,
             threat_class=ThreatClass.RECON_PORT_SCAN,
             detector_type=DetectorType.DETERMINISTIC_BASELINE,
             confidence=confidence,
+            score=score,
             severity=severity,
             source_entity=source_entity,
-            target_entity=None,
-            timestamp_iso=timestamp_iso,
+            entity_id=source_entity,
+            timestamp_iso=now_ts,
+            evidence=evidence_items,
             indicators=indicators,
-            detector_id="ReconDetector",
-            detector_version="1.0.0",
+            detector_id=self.detector_id,
+            detector_version=self.detector_version,
             decision_reason=decision_reasons,
             observable_features=observable_features,
             provenance=prov,

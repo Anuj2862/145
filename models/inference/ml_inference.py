@@ -18,63 +18,24 @@ import pandas as pd
 import joblib
 
 from schemas import ThreatClass
+from features.feature_contract import (
+    LEGACY_MODEL_FEATURE_NAMES,
+    MODEL_FEATURE_SCHEMA_VERSION,
+    ModelVector,
+    check_model_feature_compatibility,
+    legacy_model_schema,
+    validate_feature_schema,
+)
+from features.model_features_v2 import (
+    MODEL_V2_FEATURE_NAMES,
+    MODEL_V2_FEATURE_SCHEMA_VERSION,
+    V2FeaturePreprocessor,
+    V2PreprocessingState,
+)
+from models.training.calibration import ValidationProbabilityCalibrator
 
-EXPECTED_FEATURE_COUNT = 52
-
-EXPECTED_FEATURE_NAMES = [
-    "duration",
-    "total_packets",
-    "total_bytes",
-    "bytes_forward",
-    "bytes_backward",
-    "packets_per_sec",
-    "bytes_per_sec",
-    "packet_size_mean",
-    "iat_mean",
-    "iat_std",
-    "periodicity_score",
-    "jitter",
-    "burst_rate",
-    "dns_query_count",
-    "unique_domain_count",
-    "domain_length_mean",
-    "domain_entropy",
-    "ngram_score",
-    "dns_query_rate",
-    "session_resumption",
-    "tls_packet_size_mean",
-    "unique_dst_ips",
-    "unique_dst_ports",
-    "connection_attempt_rate",
-    "failed_connection_ratio",
-    "fan_out",
-    "outbound_bytes",
-    "outbound_rate",
-    "upload_download_ratio",
-    "destination_count",
-    "large_transfer_score",
-    "entity_flow_count_1m",
-    "entity_unique_destinations_1m",
-    "entity_new_destinations_5m",
-    "entity_avg_connection_interval",
-    "entity_periodicity",
-    "ja3_JA3_A",
-    "ja3_JA3_B",
-    "ja3_JA3_C",
-    "ja3_JA3_D",
-    "ja3_JA3_E",
-    "ja4_JA4_A",
-    "ja4_JA4_B",
-    "ja4_JA4_C",
-    "ja4_JA4_D",
-    "ja4_JA4_E",
-    "ja4_JA4_SUS_1",
-    "ja4_JA4_SUS_2",
-    "ja4_JA4_SUS_3",
-    "tls_version_NONE",
-    "tls_version_TLS1.2",
-    "tls_version_TLS1.3",
-]
+EXPECTED_FEATURE_NAMES = list(LEGACY_MODEL_FEATURE_NAMES)
+EXPECTED_FEATURE_COUNT = len(EXPECTED_FEATURE_NAMES)
 
 LABEL_MAPPING: Dict[int, Tuple[str, Optional[ThreatClass]]] = {
     0: ("BENIGN", None),
@@ -142,6 +103,7 @@ class MLInferenceEngine:
         self.rf_model = None
         self.if_model = None
         self.metadata = None
+        self.model_feature_schema_version = MODEL_FEATURE_SCHEMA_VERSION
         self.feature_names = EXPECTED_FEATURE_NAMES
 
         self._load_artifacts()
@@ -156,6 +118,8 @@ class MLInferenceEngine:
         rf_path = os.path.join(self.artifact_dir, "rf_baseline_model.joblib")
         if_path = os.path.join(self.artifact_dir, "isolation_forest_model.joblib")
         meta_path = os.path.join(self.artifact_dir, "lgb_multiclass_metadata.json")
+        rf_meta_path = os.path.join(self.artifact_dir, "rf_baseline_metadata.json")
+        if_meta_path = os.path.join(self.artifact_dir, "isolation_forest_metadata.json")
 
         missing_files = []
         if not os.path.exists(lgb_path):
@@ -174,14 +138,32 @@ class MLInferenceEngine:
         self.lgb_model = joblib.load(lgb_path)
         self.rf_model = joblib.load(rf_path)
         self.if_model = joblib.load(if_path)
+        if hasattr(self.rf_model, "n_jobs"):
+            self.rf_model.n_jobs = 1
+        if hasattr(self.if_model, "n_jobs"):
+            self.if_model.n_jobs = 1
 
         if os.path.exists(meta_path):
             with open(meta_path, "r") as f:
                 self.metadata = json.load(f)
                 if "feature_names" in self.metadata:
                     self.feature_names = self.metadata["feature_names"]
+                check_model_feature_compatibility(
+                    self.metadata,
+                    legacy_model_schema(),
+                    allow_legacy_adapter=True,
+                )
 
-    def validate_features(self, X: Union[np.ndarray, pd.DataFrame, pd.Series, List[float]]) -> np.ndarray:
+        for path in (rf_meta_path, if_meta_path):
+            if os.path.exists(path):
+                with open(path, "r") as f:
+                    check_model_feature_compatibility(
+                        json.load(f),
+                        legacy_model_schema(),
+                        allow_legacy_adapter=True,
+                    )
+
+    def validate_features(self, X: Union[np.ndarray, pd.DataFrame, pd.Series, List[float], ModelVector]) -> np.ndarray:
         """Validate input features against strict 52-feature contract.
         
         Enforces:
@@ -191,7 +173,10 @@ class MLInferenceEngine:
           
         Returns clean C-contiguous np.ndarray of shape (N, 52) or (1, 52).
         """
-        if isinstance(X, list):
+        if isinstance(X, ModelVector):
+            self.validate_model_vector(X)
+            X_arr = X.as_2d_array()
+        elif isinstance(X, list):
             X_arr = np.array(X, dtype=np.float64)
         elif isinstance(X, pd.Series):
             if len(X) != EXPECTED_FEATURE_COUNT:
@@ -241,6 +226,20 @@ class MLInferenceEngine:
 
         return np.ascontiguousarray(X_arr, dtype=np.float64)
 
+    def validate_model_vector(self, vector: ModelVector) -> None:
+        """Fail loudly when a versioned model vector drifts from the loaded model contract."""
+        if vector.schema_version != self.model_feature_schema_version:
+            raise ValueError(
+                "Model vector schema version mismatch: "
+                f"expected {self.model_feature_schema_version}, got {vector.schema_version}"
+            )
+        validate_feature_schema(
+            actual_feature_names=vector.feature_names,
+            expected_feature_names=self.feature_names,
+            actual_schema_version=vector.schema_version,
+            expected_schema_version=self.model_feature_schema_version,
+        ).raise_for_error()
+
     def predict_classification(
         self,
         X: Union[np.ndarray, pd.DataFrame, pd.Series, List[float]],
@@ -255,13 +254,13 @@ class MLInferenceEngine:
         model = self.rf_model if use_fallback_rf else self.lgb_model
         model_name = "RandomForestClassifier" if use_fallback_rf else "LGBMClassifier"
 
-        t0 = time.time()
+        t0 = time.perf_counter()
         if hasattr(model, "predict_proba"):
             probas = model.predict_proba(X_mat)
         else:
             # Booster object
             probas = model.predict(X_mat)
-        pred_time_ms = (time.time() - t0) * 1000.0 / len(X_mat)
+        pred_time_ms = max(time.perf_counter() - t0, 1e-12) * 1000.0 / len(X_mat)
 
         results = []
         for i in range(len(X_mat)):
@@ -297,10 +296,10 @@ class MLInferenceEngine:
         """
         X_mat = self.validate_features(X)
 
-        t0 = time.time()
+        t0 = time.perf_counter()
         scores = self.if_model.decision_function(X_mat)
         preds = self.if_model.predict(X_mat)
-        pred_time_ms = (time.time() - t0) * 1000.0 / len(X_mat)
+        pred_time_ms = max(time.perf_counter() - t0, 1e-12) * 1000.0 / len(X_mat)
 
         results = []
         for i in range(len(X_mat)):
@@ -363,22 +362,22 @@ class MLInferenceEngine:
         _ = self.predict_anomaly(X_mat)
 
         # LightGBM
-        t0 = time.time()
+        t0 = time.perf_counter()
         for _ in range(num_runs):
             _ = self.predict_classification(X_mat, use_fallback_rf=False)
-        lgb_time = (time.time() - t0) / num_runs
+        lgb_time = max((time.perf_counter() - t0) / num_runs, 1e-12)
 
         # Random Forest
-        t0 = time.time()
+        t0 = time.perf_counter()
         for _ in range(num_runs):
             _ = self.predict_classification(X_mat, use_fallback_rf=True)
-        rf_time = (time.time() - t0) / num_runs
+        rf_time = max((time.perf_counter() - t0) / num_runs, 1e-12)
 
         # Isolation Forest
-        t0 = time.time()
+        t0 = time.perf_counter()
         for _ in range(num_runs):
             _ = self.predict_anomaly(X_mat)
-        if_time = (time.time() - t0) / num_runs
+        if_time = max((time.perf_counter() - t0) / num_runs, 1e-12)
 
         n_samples = len(X_mat)
         return {
@@ -395,3 +394,115 @@ class MLInferenceEngine:
                 "throughput_samples_per_sec": round(n_samples / if_time, 2),
             },
         }
+
+
+class V2MLInferenceEngine:
+    """Production ML Inference Engine for Native FeatureSchema-v2 Models (M16).
+
+    Loads native v2 artifacts:
+      - lgb_multiclass_v2.joblib
+      - lgb_calibrator_v2.joblib
+      - rf_baseline_v2.joblib
+      - isolation_forest_v2.joblib
+      - v2_preprocessor.joblib
+    """
+
+    def __init__(self, artifact_dir: str = "models/artifacts"):
+        self.artifact_dir = os.path.abspath(artifact_dir)
+        self.lgb_model = None
+        self.calibrator = None
+        self.rf_model = None
+        self.if_model = None
+        self.preprocessor = None
+        self.metadata = None
+        self.feature_names = list(MODEL_V2_FEATURE_NAMES)
+        self.feature_schema_version = MODEL_V2_FEATURE_SCHEMA_VERSION
+        self._load_artifacts()
+
+    def _load_artifacts(self) -> None:
+        lgb_path = os.path.join(self.artifact_dir, "lgb_multiclass_v2.joblib")
+        cal_path = os.path.join(self.artifact_dir, "lgb_calibrator_v2.joblib")
+        rf_path = os.path.join(self.artifact_dir, "rf_baseline_v2.joblib")
+        if_path = os.path.join(self.artifact_dir, "isolation_forest_v2.joblib")
+        prep_path = os.path.join(self.artifact_dir, "v2_preprocessor.joblib")
+        meta_path = os.path.join(self.artifact_dir, "lgb_multiclass_v2_metadata.json")
+
+        self.lgb_model = joblib.load(lgb_path)
+        self.calibrator = joblib.load(cal_path)
+        self.rf_model = joblib.load(rf_path)
+        self.if_model = joblib.load(if_path)
+        self.preprocessor = joblib.load(prep_path)
+
+        if os.path.exists(meta_path):
+            with open(meta_path, "r") as f:
+                self.metadata = json.load(f)
+
+    def predict(
+        self,
+        features: Union[Dict[str, Any], np.ndarray, pd.DataFrame],
+        source_entity: str = "unknown",
+        target_entity: Optional[str] = None,
+        timestamp_iso: Optional[str] = None,
+    ) -> UnifiedMLResult:
+        """Execute calibrated v2 classification and anomaly inference."""
+        if isinstance(features, dict):
+            X_mat = self.preprocessor.transform_dict(features)
+        elif isinstance(features, pd.DataFrame):
+            X_mat = self.preprocessor.transform_df(features)
+        elif isinstance(features, np.ndarray):
+            X_mat = features if features.ndim == 2 else features.reshape(1, -1)
+        else:
+            raise TypeError(f"Unsupported features type: {type(features)}")
+
+        # Classification with Calibrated Probabilities
+        t0 = time.perf_counter()
+        raw_probs = self.lgb_model.predict_proba(X_mat)
+        cal_probs = self.calibrator.calibrate(raw_probs)
+        latency_ms = (time.perf_counter() - t0) * 1000.0
+
+        pred_idx = int(np.argmax(cal_probs, axis=1)[0])
+        prob_dict = {
+            cname: float(cal_probs[0, idx])
+            for idx, (cname, _) in LABEL_MAPPING.items()
+            if idx < cal_probs.shape[1]
+        }
+        pred_name, threat_cls = LABEL_MAPPING[pred_idx]
+        conf = float(cal_probs[0, pred_idx])
+        is_threat = (pred_idx != 0)
+
+        clf_res = ClassificationResult(
+            predicted_class_index=pred_idx,
+            predicted_class_name=pred_name,
+            threat_class=threat_cls,
+            probabilities=prob_dict,
+            confidence=conf,
+            is_threat=is_threat,
+            model_name="LGBMClassifier-V2-Calibrated",
+            inference_latency_ms=latency_ms,
+        )
+
+        # Anomaly Detection
+        t0 = time.perf_counter()
+        raw_score = float(self.if_model.decision_function(X_mat)[0])
+        is_anom = bool(self.if_model.predict(X_mat)[0] == -1)
+        anom_latency_ms = (time.perf_counter() - t0) * 1000.0
+
+        norm_conf = float(1.0 / (1.0 + np.exp(raw_score * 10.0)))
+        anom_res = AnomalyResult(
+            is_anomaly=is_anom,
+            anomaly_score=raw_score,
+            normalized_confidence=norm_conf,
+            model_name="IsolationForest-V2",
+            inference_latency_ms=anom_latency_ms,
+        )
+
+        if not timestamp_iso:
+            timestamp_iso = pd.Timestamp.now(tz="UTC").isoformat()
+
+        return UnifiedMLResult(
+            classification=clf_res,
+            anomaly=anom_res,
+            source_entity=source_entity,
+            target_entity=target_entity,
+            timestamp_iso=timestamp_iso,
+        )

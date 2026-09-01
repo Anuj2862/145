@@ -1,5 +1,6 @@
 {
   "model_name": "LGBMClassifier",
+  "model_version": "m12-legacy",
   "random_seed": 42,
   "num_features": 52,
   "feature_names": [
@@ -56,6 +57,8 @@
     "tls_version_TLS1.2",
     "tls_version_TLS1.3"
   ],
+  "feature_schema_version": "legacy-52-v1",
+  "compatibility_status": "legacy_adapter_required",
   "label_map": {
     "BENIGN": 0,
     "DDOS": 1,

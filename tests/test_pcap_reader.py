@@ -108,6 +108,7 @@ def _ipv6(
 def _tcp(
     data_offset_byte: int = 0x50,
     flags: int = 0x02,
+    payload: bytes = b"",
 ) -> bytes:
     return (
         struct.pack("!HH", 12345, 443)
@@ -115,13 +116,65 @@ def _tcp(
         + b"\x00\x00\x00\x00"
         + bytes([data_offset_byte, flags])
         + b"\x00\x00\x00\x00\x00\x00"
+        + payload
     )
 
 
 def _udp(
     length: int = 8,
+    payload: bytes = b"",
 ) -> bytes:
-    return struct.pack("!HHHH", 12345, 53, length, 0)
+    packet_length = 8 + len(payload) if payload else length
+    return struct.pack("!HHHH", 12345, 53, packet_length, 0) + payload
+
+
+def _dns_query_payload(name: str, qtype: int = 16) -> bytes:
+    encoded_name = b"".join(
+        bytes([len(label)]) + label.encode("ascii")
+        for label in name.split(".")
+    ) + b"\x00"
+    return (
+        struct.pack("!HHHHHH", 0x1234, 0x0100, 1, 0, 0, 0)
+        + encoded_name
+        + struct.pack("!HH", qtype, 1)
+    )
+
+
+def _tls_client_hello_payload(
+    sni: str = "secure.example.test",
+    alpn: str = "h2",
+) -> bytes:
+    sni_name = sni.encode("ascii")
+    sni_extension_data = (
+        struct.pack("!H", len(sni_name) + 3)
+        + b"\x00"
+        + struct.pack("!H", len(sni_name))
+        + sni_name
+    )
+    alpn_name = alpn.encode("ascii")
+    alpn_extension_data = (
+        struct.pack("!H", len(alpn_name) + 1)
+        + bytes([len(alpn_name)])
+        + alpn_name
+    )
+    extensions = (
+        struct.pack("!HH", 0, len(sni_extension_data))
+        + sni_extension_data
+        + struct.pack("!HH", 16, len(alpn_extension_data))
+        + alpn_extension_data
+    )
+    body = (
+        b"\x03\x03"
+        + (b"\x01" * 32)
+        + b"\x00"
+        + struct.pack("!H", 2)
+        + b"\x13\x01"
+        + b"\x01\x00"
+        + struct.pack("!H", len(extensions))
+        + extensions
+    )
+    handshake = b"\x01" + len(body).to_bytes(3, "big") + body
+    return b"\x16\x03\x01" + struct.pack("!H", len(handshake)) + handshake
 
 
 def _packets_from_frame(
@@ -255,6 +308,48 @@ class TestPcapReaderHardening(unittest.TestCase):
         self.assertEqual(packets[0].src_port, 12345)
         self.assertEqual(packets[0].dst_port, 53)
         self.assertEqual(packets[0].protocol, 17)
+        self.assertIsNone(packets[0].dns)
+
+    def test_dns_question_metadata_is_extracted_when_payload_contains_it(self):
+        packets = _packets_from_frame(
+            _ethernet(
+                0x0800,
+                _ipv4(
+                    17,
+                    _udp(payload=_dns_query_payload("a1b2c3.example.test")),
+                ),
+            )
+        )
+
+        self.assertEqual(len(packets), 1)
+        self.assertIsNotNone(packets[0].dns)
+        self.assertEqual(packets[0].dns.query_name, "a1b2c3.example.test")
+        self.assertEqual(packets[0].dns.query_type, "TXT")
+
+    def test_all_zero_dns_payload_is_unavailable_not_empty_query(self):
+        packets = _packets_from_frame(
+            _ethernet(
+                0x0800,
+                _ipv4(17, _udp(payload=b"\x00" * 120)),
+            )
+        )
+
+        self.assertEqual(len(packets), 1)
+        self.assertIsNone(packets[0].dns)
+
+    def test_tls_client_hello_metadata_is_extracted_when_payload_contains_it(self):
+        packets = _packets_from_frame(
+            _ethernet(
+                0x0800,
+                _ipv4(6, _tcp(flags=0x18, payload=_tls_client_hello_payload())),
+            )
+        )
+
+        self.assertEqual(len(packets), 1)
+        self.assertIsNotNone(packets[0].tls)
+        self.assertEqual(packets[0].tls.sni, "secure.example.test")
+        self.assertEqual(packets[0].tls.alpn, "h2")
+        self.assertEqual(packets[0].tls.tls_version, "TLS1.2")
 
     def test_valid_vlan_still_parses(self):
         packets = _packets_from_frame(

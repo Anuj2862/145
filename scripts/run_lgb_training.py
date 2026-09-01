@@ -20,11 +20,12 @@ import numpy as np
 import pandas as pd
 import lightgbm as lgb
 import joblib
+from features.feature_contract import LEGACY_MODEL_FEATURE_NAMES, validate_feature_schema
 
 # ─── Constants ────────────────────────────────────────────────────────────────
 
 FORBIDDEN_COLUMNS = {"recent_risk", "baseline_deviation"}
-EXPECTED_FEATURE_COUNT = 52
+EXPECTED_FEATURE_COUNT = len(LEGACY_MODEL_FEATURE_NAMES)
 EXPECTED_LABEL_RANGE = set(range(7))
 
 DEFAULT_LABEL_MAP = {
@@ -63,6 +64,10 @@ def load_split(csv_path, split_name):
         raise ValueError(
             f"'{split_name}' has {len(feature_cols)} features, expected {EXPECTED_FEATURE_COUNT}."
         )
+    validate_feature_schema(
+        actual_feature_names=feature_cols,
+        expected_feature_names=LEGACY_MODEL_FEATURE_NAMES,
+    ).raise_for_error()
 
     labels = set(df["label"].unique())
     if not labels.issubset(EXPECTED_LABEL_RANGE):

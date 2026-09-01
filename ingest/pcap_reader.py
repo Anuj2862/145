@@ -2,7 +2,11 @@ from dataclasses import dataclass
 from pathlib import Path
 import socket
 import struct
-from typing import Iterator, Optional
+from typing import Any, Iterator, Optional
+
+from schemas.telemetry import DNSMetadata
+from schemas.telemetry import TLSMetadata
+from schemas.telemetry import UNKNOWN_SENSOR_ID
 
 
 DEFAULT_MAX_CAPTURED_PACKET_SIZE = 262_144
@@ -45,6 +49,16 @@ class NormalizedPacket:
     tcp_psh: int = 0
     tcp_urg: int = 0
 
+    ingest_time: float | None = None
+    sensor_id: str = UNKNOWN_SENSOR_ID
+    dns: Any | None = None
+    tls: Any | None = None
+    quic: Any | None = None
+
+    @property
+    def event_time(self) -> float:
+        return self.timestamp
+
 
 def _ip_text(raw: bytes) -> str:
     if len(raw) == 4:
@@ -71,6 +85,8 @@ def _parse_transport(
     rst = 0
     psh = 0
     urg = 0
+    dns = None
+    tls = None
 
     # TCP
     if protocol == 6:
@@ -100,6 +116,9 @@ def _parse_transport(
         ack = int(bool(flags & 0x0010))
         urg = int(bool(flags & 0x0020))
 
+        if src_port in {443, 8443} or dst_port in {443, 8443}:
+            tls = _parse_tls_client_hello_metadata(payload[data_offset:])
+
     # UDP
     elif protocol == 17:
 
@@ -113,6 +132,9 @@ def _parse_transport(
 
         if udp_length < 8 or udp_length > len(payload):
             return None
+
+        if src_port == 53 or dst_port == 53:
+            dns = _parse_dns_metadata(payload[8:udp_length])
 
     return NormalizedPacket(
         timestamp=timestamp,
@@ -128,7 +150,210 @@ def _parse_transport(
         tcp_rst=rst,
         tcp_psh=psh,
         tcp_urg=urg,
+        dns=dns,
+        tls=tls,
     )
+
+
+def _parse_dns_metadata(
+    payload: bytes,
+) -> DNSMetadata | None:
+    if len(payload) < 12:
+        return None
+
+    _, flags, qdcount, ancount, nscount, arcount = struct.unpack(
+        "!HHHHHH",
+        payload[:12],
+    )
+    if qdcount == 0 and ancount == 0 and nscount == 0 and arcount == 0:
+        return None
+
+    rcode = flags & 0x000F
+
+    labels: list[str] = []
+    offset = 12
+    if qdcount > 0:
+        parsed = _read_dns_name(payload, offset)
+        if parsed is None:
+            return None
+        labels, offset = parsed
+
+    query_type = None
+    if qdcount > 0 and offset + 4 <= len(payload):
+        qtype = struct.unpack("!H", payload[offset:offset + 2])[0]
+        query_type = {
+            1: "A",
+            2: "NS",
+            5: "CNAME",
+            15: "MX",
+            16: "TXT",
+            28: "AAAA",
+        }.get(qtype, str(qtype))
+
+    return DNSMetadata(
+        query_name=".".join(labels) if labels else None,
+        query_type=query_type,
+        response_code={
+            0: "NOERROR",
+            3: "NXDOMAIN",
+        }.get(rcode, str(rcode)),
+        answer_count=ancount,
+    )
+
+
+def _read_dns_name(payload: bytes, offset: int) -> tuple[list[str], int] | None:
+    labels = []
+    cursor = offset
+    next_offset = offset
+    jumped = False
+    seen_offsets: set[int] = set()
+
+    for _ in range(128):
+        if cursor >= len(payload):
+            return None
+        label_len = payload[cursor]
+
+        if (label_len & 0xC0) == 0xC0:
+            if cursor + 1 >= len(payload):
+                return None
+            pointer = ((label_len & 0x3F) << 8) | payload[cursor + 1]
+            if pointer in seen_offsets or pointer >= len(payload):
+                return None
+            seen_offsets.add(pointer)
+            if not jumped:
+                next_offset = cursor + 2
+            cursor = pointer
+            jumped = True
+            continue
+
+        if label_len & 0xC0:
+            return None
+
+        cursor += 1
+        if label_len == 0:
+            if not jumped:
+                next_offset = cursor
+            return labels, next_offset
+
+        if cursor + label_len > len(payload):
+            return None
+        try:
+            labels.append(payload[cursor:cursor + label_len].decode("ascii"))
+        except UnicodeDecodeError:
+            return None
+        cursor += label_len
+        if not jumped:
+            next_offset = cursor
+
+    return None
+
+
+def _parse_tls_client_hello_metadata(payload: bytes) -> TLSMetadata | None:
+    if len(payload) < 9 or payload[0] != 22:
+        return None
+
+    record_length = struct.unpack("!H", payload[3:5])[0]
+    if record_length + 5 > len(payload):
+        return None
+
+    handshake = payload[5:5 + record_length]
+    if len(handshake) < 4 or handshake[0] != 1:
+        return None
+
+    handshake_length = int.from_bytes(handshake[1:4], "big")
+    body = handshake[4:4 + handshake_length]
+    if len(body) < 38:
+        return None
+
+    offset = 34
+    session_id_len = body[offset]
+    offset += 1 + session_id_len
+    if offset + 2 > len(body):
+        return None
+
+    cipher_len = struct.unpack("!H", body[offset:offset + 2])[0]
+    offset += 2 + cipher_len
+    if offset >= len(body):
+        return None
+
+    compression_len = body[offset]
+    offset += 1 + compression_len
+    if offset + 2 > len(body):
+        return TLSMetadata(tls_version=_tls_version_name(body[:2]))
+
+    extensions_len = struct.unpack("!H", body[offset:offset + 2])[0]
+    offset += 2
+    extensions_end = min(len(body), offset + extensions_len)
+    sni = None
+    alpn = None
+
+    while offset + 4 <= extensions_end:
+        ext_type, ext_len = struct.unpack("!HH", body[offset:offset + 4])
+        offset += 4
+        ext_data = body[offset:offset + ext_len]
+        offset += ext_len
+
+        if ext_type == 0 and sni is None:
+            sni = _parse_tls_sni(ext_data)
+        elif ext_type == 16 and alpn is None:
+            alpn = _parse_tls_alpn(ext_data)
+
+    return TLSMetadata(
+        sni=sni,
+        alpn=alpn,
+        tls_version=_tls_version_name(body[:2]),
+    )
+
+
+def _parse_tls_sni(data: bytes) -> str | None:
+    if len(data) < 5:
+        return None
+    list_len = struct.unpack("!H", data[:2])[0]
+    offset = 2
+    end = min(len(data), 2 + list_len)
+    while offset + 3 <= end:
+        name_type = data[offset]
+        name_len = struct.unpack("!H", data[offset + 1:offset + 3])[0]
+        offset += 3
+        if offset + name_len > end:
+            return None
+        if name_type == 0:
+            try:
+                return data[offset:offset + name_len].decode("ascii")
+            except UnicodeDecodeError:
+                return None
+        offset += name_len
+    return None
+
+
+def _parse_tls_alpn(data: bytes) -> str | None:
+    if len(data) < 3:
+        return None
+    list_len = struct.unpack("!H", data[:2])[0]
+    offset = 2
+    end = min(len(data), 2 + list_len)
+    names = []
+    while offset < end:
+        name_len = data[offset]
+        offset += 1
+        if offset + name_len > end:
+            return None
+        try:
+            names.append(data[offset:offset + name_len].decode("ascii"))
+        except UnicodeDecodeError:
+            return None
+        offset += name_len
+    return ",".join(name for name in names if name) or None
+
+
+def _tls_version_name(raw: bytes) -> str | None:
+    versions = {
+        b"\x03\x01": "TLS1.0",
+        b"\x03\x02": "TLS1.1",
+        b"\x03\x03": "TLS1.2",
+        b"\x03\x04": "TLS1.3",
+    }
+    return versions.get(raw)
 
 
 def _parse_ipv4(

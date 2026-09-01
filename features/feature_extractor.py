@@ -1,6 +1,5 @@
 import uuid
 from typing import List
-from datetime import datetime, timezone
 from schemas import FlowEvent, FeatureVector
 from features.flow_features import extract_flow_features
 from features.temporal_features import extract_temporal_features
@@ -19,7 +18,7 @@ class FeatureExtractor:
         Currently extracts only FlowFeatures.
         """
         feature_id = f"fv-{uuid.uuid4().hex[:8]}"
-        timestamp_iso = datetime.now(timezone.utc).isoformat()
+        timestamp_iso = flow.end_time_iso
         flow_features = extract_flow_features(flow)
         
         return FeatureVector(
@@ -44,7 +43,7 @@ class FeatureExtractor:
         primary_flow = flows[-1]
         
         feature_id = f"fv-{uuid.uuid4().hex[:8]}"
-        timestamp_iso = datetime.now(timezone.utc).isoformat()
+        timestamp_iso = primary_flow.end_time_iso
         
         flow_features = extract_flow_features(primary_flow)
         temporal_features = extract_temporal_features(flows)

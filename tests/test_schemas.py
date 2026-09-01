@@ -9,6 +9,9 @@ from schemas import (
     DNSFeatures,
     TLSFeatures,
     TemporalFeatures,
+    DNSMetadata,
+    TLSMetadata,
+    QUICMetadata,
     DetectionSignal,
     ThreatClass,
     DetectorType,
@@ -42,6 +45,40 @@ class TestSchemas(unittest.TestCase):
         self.assertIn("10.0.0.15", json_data)
         self.assertEqual(flow.packet_count, 45)
         self.assertEqual(flow.tcp_flags.syn_count, 1)
+        self.assertEqual(flow.entity_id, "10.0.0.15")
+        self.assertEqual(
+            flow.conversation_id,
+            "10.0.0.15:49200<->198.51.100.2:443-6",
+        )
+
+    def test_flow_event_accepts_phase2_telemetry_metadata(self):
+        flow = FlowEvent(
+            flow_id="10.0.0.15:49200-198.51.100.2:443-17",
+            sensor_id="sensor-a",
+            src_ip="10.0.0.15",
+            dst_ip="198.51.100.2",
+            src_port=49200,
+            dst_port=443,
+            protocol=17,
+            event_time=1780000000.0,
+            ingest_time=1780000000.2,
+            processing_time=1780000000.3,
+            alert_time=None,
+            start_time_iso="2026-08-30T10:00:00.000000Z",
+            end_time_iso="2026-08-30T10:00:05.000000Z",
+            duration_sec=5.0,
+            packet_count=45,
+            byte_count=18450,
+            dns=DNSMetadata(query_name="example.test", query_type="TXT"),
+            tls=TLSMetadata(sni="example.test", alpn="h3"),
+            quic=QUICMetadata(version="1", connection_id="abcd"),
+        )
+
+        self.assertEqual(flow.entity_id, "sensor-a:10.0.0.15")
+        self.assertEqual(flow.event_time, 1780000000.0)
+        self.assertEqual(flow.dns.query_type, "TXT")
+        self.assertEqual(flow.tls.alpn, "h3")
+        self.assertEqual(flow.quic.version, "1")
 
     def test_feature_vector_serialization(self):
         fv = FeatureVector(

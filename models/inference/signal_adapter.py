@@ -22,6 +22,7 @@ from models.inference.ml_inference import (
     UnifiedMLResult,
     EXPECTED_FEATURE_NAMES,
 )
+from features.feature_contract import build_model_vector
 
 
 def calculate_severity(confidence: float) -> Severity:
@@ -256,15 +257,10 @@ class FeatureVectorAdapter:
     def dict_to_features(data: Dict[str, Any]) -> np.ndarray:
         """Convert a feature dictionary into a 52-feature C-contiguous np.ndarray (1, 52).
         
-        Fills missing values with 0.0 or default medians as appropriate.
+        Compatibility wrapper over the versioned model-vector builder.
         """
-        feats = []
-        for name in EXPECTED_FEATURE_NAMES:
-            val = data.get(name, 0.0)
-            if val is None or np.isnan(val) or np.isinf(val):
-                val = 0.0
-            feats.append(float(val))
-        return np.array(feats, dtype=np.float64).reshape(1, -1)
+        vector = build_model_vector(data)
+        return vector.as_2d_array()
 
     @staticmethod
     def feature_vector_to_features(fv: FeatureVector) -> np.ndarray:

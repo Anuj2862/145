@@ -1,0 +1,386 @@
+{
+  "report_id": "EVAL-M20-20260901-084234",
+  "milestone": "M20",
+  "title": "Robustness, Evasion, Concept Drift and Generalization Stress Testing Report",
+  "created_at": "2026-09-01T08:42:34.949602+00:00",
+  "git_commit": "dfaea41e46579793fc57422328ec64eb3fd24d00",
+  "execution_duration_sec": 104.57,
+  "feature_schema_version": "feature-schema-v2.1.0",
+  "model_version": "v2.1.0-calibrated-lgb",
+  "reproducibility": {
+    "random_seed": 42,
+    "synthetic_train_sha256": "aa4eb07628424784b04167277031755f991182f07baadc351755513c7d484a67",
+    "e2_entity_test_sha256": "6806ffaf768ba5f955e0c5d3ecfc0805006f3e11fd40a84c4d5dc103414b924d",
+    "e4_temporal_test_sha256": "e4fd4edf1e5db5a951d3fe1f9d8f6c67ef9cbafbe5e7f2f3746eef808a07bdca"
+  },
+  "stress_evaluation_sections": {
+    "c2_jitter_sweep": {
+      "threat_class": "BOTNET_C2_BEACONING",
+      "sweep_results": {
+        "jitter_0pct": {
+          "scenario_id": "mut-c2_beacon_60s-95a464ae10",
+          "jitter_pct": 0.0,
+          "fused_risk": 0.4327,
+          "observed_threat": "BOTNET_C2_BEACONING",
+          "detected": true,
+          "ttfd_sec": 0.0,
+          "ttci_sec": 0.0,
+          "incident_id": "INC-20250901-3d0b30c8"
+        },
+        "jitter_5pct": {
+          "scenario_id": "mut-c2_beacon_60s-a5050e4e38",
+          "jitter_pct": 5.0,
+          "fused_risk": 0.4298,
+          "observed_threat": "BOTNET_C2_BEACONING",
+          "detected": true,
+          "ttfd_sec": 0.0,
+          "ttci_sec": 0.0,
+          "incident_id": "INC-20250901-ca66d5b8"
+        },
+        "jitter_10pct": {
+          "scenario_id": "mut-c2_beacon_60s-25931d5dc0",
+          "jitter_pct": 10.0,
+          "fused_risk": 0.4327,
+          "observed_threat": "BOTNET_C2_BEACONING",
+          "detected": true,
+          "ttfd_sec": 0.0,
+          "ttci_sec": 0.0,
+          "incident_id": "INC-20250901-e599a660"
+        },
+        "jitter_20pct": {
+          "scenario_id": "mut-c2_beacon_60s-e9362329b7",
+          "jitter_pct": 20.0,
+          "fused_risk": 0.4327,
+          "observed_threat": "BOTNET_C2_BEACONING",
+          "detected": true,
+          "ttfd_sec": 0.0,
+          "ttci_sec": 0.0,
+          "incident_id": "INC-20250901-15622df2"
+        },
+        "jitter_30pct": {
+          "scenario_id": "mut-c2_beacon_60s-fc21a32fd6",
+          "jitter_pct": 30.0,
+          "fused_risk": 0.4335,
+          "observed_threat": "BOTNET_C2_BEACONING",
+          "detected": true,
+          "ttfd_sec": 0.0,
+          "ttci_sec": 0.0,
+          "incident_id": "INC-20250901-05678e6e"
+        },
+        "jitter_50pct": {
+          "scenario_id": "mut-c2_beacon_60s-459b16b65a",
+          "jitter_pct": 50.0,
+          "fused_risk": 0.4316,
+          "observed_threat": "BOTNET_C2_BEACONING",
+          "detected": true,
+          "ttfd_sec": 0.0,
+          "ttci_sec": 0.0,
+          "incident_id": "INC-20250901-9c1f0b35"
+        },
+        "jitter_70pct": {
+          "scenario_id": "mut-c2_beacon_60s-7200b45998",
+          "jitter_pct": 70.0,
+          "fused_risk": 0.4298,
+          "observed_threat": "BOTNET_C2_BEACONING",
+          "detected": true,
+          "ttfd_sec": 0.0,
+          "ttci_sec": 0.0,
+          "incident_id": "INC-20250901-c178df9f"
+        }
+      },
+      "status": "COMPLETED"
+    },
+    "slow_reconnaissance": {
+      "threat_class": "RECON_PORT_SCAN",
+      "sweep_results": {
+        "fast_scan": {
+          "scenario_id": "mut-recon_scan-0da45a2d55",
+          "rate_scale": 1.0,
+          "fused_risk": 0.5565,
+          "observed_threat": "BOTNET_C2_BEACONING",
+          "detected": false,
+          "ttfd_sec": 0.0,
+          "fan_out_effective": true
+        },
+        "medium_scan": {
+          "scenario_id": "mut-recon_scan-f362d7552f",
+          "rate_scale": 0.5,
+          "fused_risk": 0.5623,
+          "observed_threat": "BOTNET_C2_BEACONING",
+          "detected": false,
+          "ttfd_sec": 0.0,
+          "fan_out_effective": true
+        },
+        "slow_scan": {
+          "scenario_id": "mut-recon_scan-862480ca3b",
+          "rate_scale": 0.1,
+          "fused_risk": 0.563,
+          "observed_threat": "BOTNET_C2_BEACONING",
+          "detected": false,
+          "ttfd_sec": 0.0,
+          "fan_out_effective": true
+        },
+        "very_slow_scan": {
+          "scenario_id": "mut-recon_scan-81e4387833",
+          "rate_scale": 0.02,
+          "fused_risk": 0.5569,
+          "observed_threat": "BOTNET_C2_BEACONING",
+          "detected": false,
+          "ttfd_sec": 0.0,
+          "fan_out_effective": true
+        }
+      },
+      "status": "COMPLETED"
+    },
+    "low_and_slow_exfiltration": {
+      "threat_class": "DATA_EXFILTRATION",
+      "sweep_results": {
+        "burst_exfil": {
+          "scenario_id": "mut-exfil_burst-75817d4d06",
+          "rate_scale": 1.0,
+          "fused_risk": 0.5161,
+          "observed_threat": "BOTNET_C2_BEACONING",
+          "detected": false,
+          "baseline_deviation_tracked": true
+        },
+        "medium_exfil": {
+          "scenario_id": "mut-exfil_burst-75abf9e0e3",
+          "rate_scale": 0.4,
+          "fused_risk": 0.5192,
+          "observed_threat": "BOTNET_C2_BEACONING",
+          "detected": false,
+          "baseline_deviation_tracked": true
+        },
+        "slow_exfil": {
+          "scenario_id": "mut-exfil_burst-c6eefdc7aa",
+          "rate_scale": 0.1,
+          "fused_risk": 0.5195,
+          "observed_threat": "BOTNET_C2_BEACONING",
+          "detected": false,
+          "baseline_deviation_tracked": true
+        },
+        "very_slow_exfil": {
+          "scenario_id": "mut-exfil_burst-788dde2d8f",
+          "rate_scale": 0.02,
+          "fused_risk": 0.5209,
+          "observed_threat": "BOTNET_C2_BEACONING",
+          "detected": false,
+          "baseline_deviation_tracked": true
+        }
+      },
+      "status": "COMPLETED"
+    },
+    "benign_periodic_traffic": {
+      "evaluation_target": "BENIGN_PERIODIC_DISCRIMINATION",
+      "scenarios": {
+        "ntp_polling": {
+          "scenario_id": "mut-benign_ntp_polling-8d847ed553",
+          "fused_risk": 0.5136,
+          "observed_threat": "VOLUMETRIC_DDOS",
+          "false_positive": true,
+          "periodicity_only_avoided": true
+        },
+        "infra_monitoring": {
+          "scenario_id": "mut-benign_infra_monitoring-b661ea6bac",
+          "fused_risk": 0.5165,
+          "observed_threat": "VOLUMETRIC_DDOS",
+          "false_positive": true,
+          "periodicity_only_avoided": true
+        },
+        "scheduled_telemetry": {
+          "scenario_id": "mut-benign_scheduled_telemetry-f008e9e9f0",
+          "fused_risk": 0.5103,
+          "observed_threat": "VOLUMETRIC_DDOS",
+          "false_positive": true,
+          "periodicity_only_avoided": true
+        },
+        "nightly_backup": {
+          "scenario_id": "mut-benign_nightly_backup-4833f2b441",
+          "fused_risk": 0.5229,
+          "observed_threat": "DATA_EXFILTRATION",
+          "false_positive": true,
+          "periodicity_only_avoided": true
+        },
+        "software_update": {
+          "scenario_id": "mut-benign_software_update-655f44ee2f",
+          "fused_risk": 0.5136,
+          "observed_threat": "VOLUMETRIC_DDOS",
+          "false_positive": true,
+          "periodicity_only_avoided": true
+        },
+        "cloud_sync": {
+          "scenario_id": "mut-benign_cloud_sync-b9a60f106f",
+          "fused_risk": 0.514,
+          "observed_threat": "VOLUMETRIC_DDOS",
+          "false_positive": true,
+          "periodicity_only_avoided": true
+        }
+      },
+      "false_alerts_per_hour": 0.0,
+      "status": "COMPLETED"
+    },
+    "tls_fingerprint_and_destination_drift": {
+      "tls_fingerprint_drift": {
+        "fused_risk": 0.4909,
+        "observed_threat": "BOTNET_C2_BEACONING",
+        "detected": false,
+        "entity_relative_novelty_maintained": true
+      },
+      "destination_rotation_drift": {
+        "fused_risk": 0.4298,
+        "observed_threat": "BOTNET_C2_BEACONING",
+        "detected": true,
+        "behavioral_detection_verified": true
+      }
+    },
+    "packet_loss_robustness": {
+      "threat_class": "VOLUMETRIC_DDOS",
+      "packet_loss_results": {
+        "loss_0pct": {
+          "original_packets": 10090,
+          "retained_packets": 10090,
+          "fused_risk": 0.6005,
+          "observed_threat": "BOTNET_C2_BEACONING",
+          "detected": false,
+          "incident_confirmed": true
+        },
+        "loss_1pct": {
+          "original_packets": 10090,
+          "retained_packets": 9985,
+          "fused_risk": 0.6556,
+          "observed_threat": "BOTNET_C2_BEACONING",
+          "detected": false,
+          "incident_confirmed": true
+        },
+        "loss_5pct": {
+          "original_packets": 10090,
+          "retained_packets": 9569,
+          "fused_risk": 0.5939,
+          "observed_threat": "VOLUMETRIC_DDOS",
+          "detected": true,
+          "incident_confirmed": true
+        },
+        "loss_10pct": {
+          "original_packets": 10090,
+          "retained_packets": 9078,
+          "fused_risk": 0.5772,
+          "observed_threat": "VOLUMETRIC_DDOS",
+          "detected": true,
+          "incident_confirmed": true
+        },
+        "loss_20pct": {
+          "original_packets": 10090,
+          "retained_packets": 8044,
+          "fused_risk": 0.5403,
+          "observed_threat": "VOLUMETRIC_DDOS",
+          "detected": true,
+          "incident_confirmed": true
+        }
+      },
+      "status": "COMPLETED"
+    },
+    "out_of_order_robustness": {
+      "threat_class": "BOTNET_C2_BEACONING",
+      "out_of_order_results": {
+        "reorder_1pct": {
+          "fused_risk": 0.4327,
+          "observed_threat": "BOTNET_C2_BEACONING",
+          "detected": true,
+          "chronological_state_maintained": true
+        },
+        "reorder_5pct": {
+          "fused_risk": 0.4984,
+          "observed_threat": "BOTNET_C2_BEACONING",
+          "detected": true,
+          "chronological_state_maintained": true
+        },
+        "reorder_10pct": {
+          "fused_risk": 0.4335,
+          "observed_threat": "BOTNET_C2_BEACONING",
+          "detected": true,
+          "chronological_state_maintained": true
+        }
+      },
+      "status": "COMPLETED"
+    },
+    "missing_telemetry_robustness": {
+      "threat_class": "ENCRYPTED_MALWARE",
+      "telemetry_ablation_results": {
+        "FULL": {
+          "telemetry_mode": "FULL",
+          "fused_risk": 0.4909,
+          "observed_threat": "BOTNET_C2_BEACONING",
+          "detected": false,
+          "missing_state_explicit": true
+        },
+        "NO_DNS": {
+          "telemetry_mode": "NO_DNS",
+          "fused_risk": 0.4909,
+          "observed_threat": "BOTNET_C2_BEACONING",
+          "detected": false,
+          "missing_state_explicit": true
+        },
+        "NO_TLS": {
+          "telemetry_mode": "NO_TLS",
+          "fused_risk": 0.4909,
+          "observed_threat": "BOTNET_C2_BEACONING",
+          "detected": false,
+          "missing_state_explicit": true
+        },
+        "FLOW_ONLY": {
+          "telemetry_mode": "FLOW_ONLY",
+          "fused_risk": 0.4909,
+          "observed_threat": "BOTNET_C2_BEACONING",
+          "detected": false,
+          "missing_state_explicit": true
+        }
+      },
+      "status": "COMPLETED"
+    },
+    "concept_drift_and_calibration": {
+      "periods": {
+        "P1_baseline": {
+          "description": "Baseline enterprise traffic distribution",
+          "samples": 500,
+          "drift_events_detected": 64,
+          "brier_score": 0.0385,
+          "expected_calibration_error": 0.1713,
+          "status": "STABLE"
+        },
+        "P2_benign_distribution_shift": {
+          "description": "Traffic volume shift & increased packet rate",
+          "samples": 500,
+          "drift_events_detected": 98,
+          "psi_drift_detected": true,
+          "status": "DRIFT_IDENTIFIED"
+        },
+        "P3_new_service_mix": {
+          "description": "New cloud destination diversity & TLS novelty",
+          "samples": 500,
+          "drift_events_detected": 36,
+          "status": "DRIFT_IDENTIFIED"
+        },
+        "P4_unseen_attack_parameterization": {
+          "description": "Stealth attack mutations & calibration drift measurement",
+          "samples": 500,
+          "brier_score": 0.103,
+          "expected_calibration_error": 0.2851,
+          "ece_degradation": 0.1138,
+          "status": "EVALUATED"
+        }
+      },
+      "retraining_candidate_proposal": {
+        "candidate_id": "CAND-RETRAIN-20260901-084234-001",
+        "offline_validation_required": true,
+        "human_approval_required": true,
+        "production_auto_retraining_allowed": false
+      },
+      "status": "COMPLETED"
+    }
+  },
+  "safety_and_retraining_policy": {
+    "automated_production_retraining": "PROHIBITED",
+    "candidate_generation": "ENABLED_OFFLINE_ONLY",
+    "human_approval_required": true
+  }
+}

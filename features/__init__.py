@@ -1,8 +1,58 @@
 """Features module for extracting intelligence from flows and streams."""
 
 from features.flow_features import FlowFeatures, extract_flow_features
+from features.feature_engine import (
+    CANONICAL_FEATURE_NAMES,
+    CANONICAL_NUMERIC_FEATURE_NAMES,
+    DEFAULT_WINDOWS_SECONDS,
+    FEATURE_SCHEMA_VERSION,
+    CanonicalFeatureSet,
+    FeatureEngine,
+    FeatureMetadata,
+    FeatureValue,
+)
+from features.feature_contract import (
+    LEGACY_MODEL_ARTIFACT_SCHEMA_VERSION,
+    LEGACY_MODEL_FEATURE_NAMES,
+    MODEL_FEATURE_SCHEMA_VERSION,
+    MODEL_MISSING_VALUE,
+    FeatureContractEntry,
+    FeatureDriftReport,
+    FeatureSchema,
+    ModelFeatureSchema,
+    ModelVector,
+    build_model_vector,
+    canonical_name_for_legacy_feature,
+    canonical_feature_schema,
+    check_model_feature_compatibility,
+    legacy_model_schema,
+    validate_feature_schema,
+)
 
 __all__ = [
     "FlowFeatures",
     "extract_flow_features",
+    "CANONICAL_FEATURE_NAMES",
+    "CANONICAL_NUMERIC_FEATURE_NAMES",
+    "DEFAULT_WINDOWS_SECONDS",
+    "FEATURE_SCHEMA_VERSION",
+    "CanonicalFeatureSet",
+    "FeatureEngine",
+    "FeatureMetadata",
+    "FeatureValue",
+    "LEGACY_MODEL_ARTIFACT_SCHEMA_VERSION",
+    "LEGACY_MODEL_FEATURE_NAMES",
+    "MODEL_FEATURE_SCHEMA_VERSION",
+    "MODEL_MISSING_VALUE",
+    "FeatureContractEntry",
+    "FeatureDriftReport",
+    "FeatureSchema",
+    "ModelFeatureSchema",
+    "ModelVector",
+    "build_model_vector",
+    "canonical_name_for_legacy_feature",
+    "canonical_feature_schema",
+    "check_model_feature_compatibility",
+    "legacy_model_schema",
+    "validate_feature_schema",
 ]

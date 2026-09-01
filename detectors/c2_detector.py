@@ -1,74 +1,138 @@
+"""Deterministic baseline detector for Botnet C2 Beaconing (Member 2 / M15).
+
+Evaluates temporal inter-arrival patterns, periodicity scores, jitter percentages,
+destination persistence, and entity novelty to identify Command & Control beaconing.
+"""
+
+from __future__ import annotations
+
 import uuid
 from datetime import datetime, timezone
-from schemas import FeatureVector, DetectionSignal, ThreatClass, DetectorType, Severity
+from typing import Any, Dict, List, Optional, Union
+
+from schemas import (
+    DetectionSignal,
+    DetectorType,
+    EvidenceItem,
+    FeatureVector,
+    Severity,
+    SignalProvenance,
+    ThreatClass,
+)
+
 
 class C2BeaconDetector:
-    """
-    Deterministic baseline detector for Botnet C2 Beaconing.
-    Evaluates temporal features (periodicity and jitter) to identify highly regular
-    and repetitive communication patterns indicative of beaconing behavior.
-    """
-    
-    # --- Configuration / Constants ---
-    MIN_OBSERVATIONS_REQUIRED = 5   # Need at least 5 intervals to confidently assess periodicity
-    PERIODICITY_HIGH = 0.9          # High periodicity threshold
-    JITTER_LOW = 10.0               # Low jitter percentage threshold (<=10%)
+    """Deterministic baseline detector for Botnet C2 Beaconing communications."""
 
-    def evaluate(self, fv: FeatureVector, observation_count: int = 0) -> DetectionSignal:
-        """
-        Evaluate the feature vector and produce a DetectionSignal.
-        
-        Args:
-            fv: The FeatureVector containing TemporalFeatures.
-            observation_count: The number of flows observed to generate the temporal features.
-        """
+    MIN_OBSERVATIONS_REQUIRED = 5   # Requires >= 5 intervals to assess periodicity
+    PERIODICITY_HIGH = 0.85         # High periodicity threshold
+    JITTER_LOW = 15.0               # Low jitter percentage threshold (<=15%)
+
+    def __init__(self, detector_id: str = "C2BeaconDetector", version: str = "1.0.0"):
+        self.detector_id = detector_id
+        self.detector_version = version
+
+    def evaluate(
+        self,
+        fv: Union[FeatureVector, Any],
+        observation_count: int = 0,
+        entity_profile: Optional[Any] = None,
+        emit_benign: bool = True,
+    ) -> Optional[DetectionSignal]:
+        """Evaluate temporal features and destination context for beaconing signatures."""
         score = 0.0
         confidence = 0.0
-        indicators = {}
-        
-        tf = fv.temporal_features
-        
-        # If temporal features are missing or incomplete, return a zero-confidence signal
+        indicators: Dict[str, Any] = {}
+        evidence_items: List[EvidenceItem] = []
+        decision_reasons: List[str] = []
+
+        tf = getattr(fv, "temporal_features", None)
+        entity_ip = getattr(fv, "entity_ip", getattr(fv, "source_entity", "unknown"))
+        flow_id = getattr(fv, "flow_id", None)
+        timestamp_iso = getattr(fv, "timestamp_iso", datetime.now(timezone.utc).isoformat())
+
+        # If temporal features are missing or incomplete, handle safely
         if not tf or tf.periodicity_score is None or tf.jitter_pct is None:
             indicators["reason"] = "Missing temporal features"
-            return self._build_signal(fv, score, confidence, Severity.INFO, indicators)
-            
-        indicators["periodicity_score"] = tf.periodicity_score
-        indicators["jitter_pct"] = tf.jitter_pct
-        indicators["inter_arrival_mean_ms"] = tf.inter_arrival_mean_ms
-        indicators["inter_arrival_std_ms"] = tf.inter_arrival_std_ms
+            if not emit_benign:
+                return None
+            return self._build_signal(
+                fv, 0.0, 0.0, Severity.INFO, indicators, evidence_items, decision_reasons, timestamp_iso, flow_id, entity_ip
+            )
+
+        periodicity = float(tf.periodicity_score)
+        jitter = float(tf.jitter_pct)
+        iat_mean = float(tf.inter_arrival_mean_ms or 0.0)
+        iat_std = float(tf.inter_arrival_std_ms or 0.0)
+
+        indicators["periodicity_score"] = periodicity
+        indicators["jitter_pct"] = jitter
+        indicators["inter_arrival_mean_ms"] = iat_mean
+        indicators["inter_arrival_std_ms"] = iat_std
         indicators["observation_count"] = observation_count
-        
-        # 1. Base Scoring based on Periodicity (0.0 to 1.0)
-        # We linearly scale periodicity score (which is already in 0-1).
-        # We'll give it a max contribution of 0.6
-        score += min(tf.periodicity_score * 0.6, 0.6)
-        
-        # 2. Scoring based on Jitter (0.0 to 0.4)
-        # If jitter is very low, we increase the score.
-        # Max contribution of 0.4 when jitter is 0.0, scaling down to 0.0 when jitter >= 50%
-        jitter_contribution = 0.0
-        if tf.jitter_pct < 50.0:
-            jitter_contribution = 0.4 * (1.0 - (tf.jitter_pct / 50.0))
-        score += jitter_contribution
-        
-        indicators["score_component_periodicity"] = min(tf.periodicity_score * 0.6, 0.6)
-        indicators["score_component_jitter"] = jitter_contribution
-        
-        # 3. Minimum Observation Handling
+
+        # 1. Base Periodicity Scoring (0.0 to 0.6)
+        periodicity_contrib = min(periodicity * 0.6, 0.6)
+        score += periodicity_contrib
+        indicators["score_component_periodicity"] = periodicity_contrib
+
+        if periodicity >= 0.8:
+            decision_reasons.append("high_temporal_periodicity_observed")
+            evidence_items.append(
+                EvidenceItem(
+                    feature_name="periodicity_score",
+                    value=round(periodicity, 3),
+                    baseline=0.0,
+                    deviation=round(periodicity, 3),
+                    interpretation=f"High connection regularity: periodicity score {periodicity:.2f} / 1.00",
+                )
+            )
+
+        # 2. Jitter Scoring (0.0 to 0.4)
+        jitter_contrib = 0.0
+        if jitter < 50.0:
+            jitter_contrib = 0.4 * (1.0 - (jitter / 50.0))
+        score += jitter_contrib
+        indicators["score_component_jitter"] = jitter_contrib
+
+        if jitter <= self.JITTER_LOW:
+            decision_reasons.append("low_inter_arrival_jitter_beacon")
+            evidence_items.append(
+                EvidenceItem(
+                    feature_name="jitter_pct",
+                    value=round(jitter, 2),
+                    baseline=50.0,
+                    deviation=round(50.0 - jitter, 2),
+                    interpretation=f"Low timing jitter ({jitter:.1f}%) indicates automated callback scheduler",
+                )
+            )
+
+        evidence_items.append(
+            EvidenceItem(
+                feature_name="inter_arrival_mean_ms",
+                value=round(iat_mean, 2),
+                interpretation=f"Mean inter-arrival interval: {iat_mean / 1000.0:.2f}s (std: {iat_std / 1000.0:.2f}s)",
+            )
+        )
+
+        # 3. Multi-Signal Agreement (Destination Persistence & Novelty Context)
+        if entity_profile is not None:
+            dest_count = len(getattr(entity_profile, "known_destinations", []))
+            if dest_count > 0:
+                indicators["destination_persistence"] = dest_count
+                decision_reasons.append("destination_persistence_confirmed")
+
+        # 4. Minimum Observation Handling
         if observation_count < self.MIN_OBSERVATIONS_REQUIRED:
             indicators["insufficient_observations_penalty"] = True
             indicators["reason"] = "Insufficient temporal observations for high confidence."
-            # Limit score and confidence
-            score = min(score, 0.4) 
+            decision_reasons.append("insufficient_observations_penalty_applied")
+            score = min(score, 0.4)
             confidence = min(score, 0.3)
         else:
-            # If we have enough observations, confidence scales closely with the score itself
-            # C2 beaconing cannot be 100% confirmed by timing alone (legitimate apps poll too)
-            # So max confidence is capped at 0.85
             confidence = min(score, 0.85)
-            
-        # 4. Determine Severity based on score and confidence
+
+        # Determine Severity
         if confidence >= 0.7:
             severity = Severity.HIGH
         elif confidence >= 0.4:
@@ -77,31 +141,39 @@ class C2BeaconDetector:
             severity = Severity.LOW
         else:
             severity = Severity.INFO
-            
-        return self._build_signal(fv, score, confidence, severity, indicators)
-        
-    def _build_signal(self, fv: FeatureVector, score: float, confidence: float, 
-                      severity: Severity, indicators: dict) -> DetectionSignal:
+
+        if confidence <= 0.0 and not emit_benign:
+            return None
+
+        return self._build_signal(
+            fv, score, confidence, severity, indicators, evidence_items, decision_reasons, timestamp_iso, flow_id, entity_ip
+        )
+
+    def _build_signal(
+        self,
+        fv: Any,
+        score: float,
+        confidence: float,
+        severity: Severity,
+        indicators: dict,
+        evidence_items: List[EvidenceItem],
+        decision_reasons: List[str],
+        timestamp_iso: str,
+        flow_id: Optional[str],
+        entity_ip: str,
+    ) -> DetectionSignal:
         signal_id = f"sig-c2-{uuid.uuid4().hex[:8]}"
         indicators["c2_suspicion_score"] = score
         now_ts = datetime.now(timezone.utc).isoformat()
-        
+
         target_entity = None
-        if fv.flow_id:
+        if flow_id:
             try:
-                target_entity = fv.flow_id.split("-")[1].split(":")[0]
+                target_entity = flow_id.split("-")[1].split(":")[0]
             except Exception:
                 pass
 
-        decision_reasons = []
-        tf = fv.temporal_features
-        if tf and tf.periodicity_score is not None and tf.periodicity_score >= 0.8:
-            decision_reasons.append("high_temporal_periodicity_observed")
-        if tf and tf.jitter_pct is not None and tf.jitter_pct <= 15.0:
-            decision_reasons.append("low_inter_arrival_jitter_beacon")
-        if indicators.get("insufficient_observations_penalty"):
-            decision_reasons.append("insufficient_observations_penalty_applied")
-
+        tf = getattr(fv, "temporal_features", None)
         observable_features = {
             "periodicity_score": getattr(tf, "periodicity_score", None) if tf else None,
             "jitter_pct": getattr(tf, "jitter_pct", None) if tf else None,
@@ -110,28 +182,31 @@ class C2BeaconDetector:
             "observation_count": indicators.get("observation_count", 0),
         }
 
-        from schemas import SignalProvenance
         prov = SignalProvenance(
-            detector_id="C2BeaconDetector",
-            detector_version="1.0.0",
+            detector_id=self.detector_id,
+            detector_version=self.detector_version,
             decision_reason=decision_reasons,
             observable_features=observable_features,
-            window_start_iso=fv.timestamp_iso,
+            window_start_iso=timestamp_iso,
             window_end_iso=now_ts,
         )
-                
+
         return DetectionSignal(
             signal_id=signal_id,
             threat_class=ThreatClass.BOTNET_C2_BEACONING,
             detector_type=DetectorType.DETERMINISTIC_BASELINE,
             confidence=confidence,
+            score=score,
             severity=severity,
-            source_entity=fv.entity_ip,
+            source_entity=entity_ip,
+            entity_id=entity_ip,
             target_entity=target_entity,
+            flow_id=flow_id,
             timestamp_iso=now_ts,
+            evidence=evidence_items,
             indicators=indicators,
-            detector_id="C2BeaconDetector",
-            detector_version="1.0.0",
+            detector_id=self.detector_id,
+            detector_version=self.detector_version,
             decision_reason=decision_reasons,
             observable_features=observable_features,
             provenance=prov,

@@ -30,6 +30,7 @@ from features.exfil_features import ExfiltrationFeatures, aggregate_exfil_featur
 from features.entity_context import EntityContextManager
 from detectors.engine import DetectionContext
 from detectors.unified_detector import UnifiedM2Orchestrator
+from schemas.telemetry import metadata_to_dict
 
 
 def _timestamp_iso(ts: float) -> str:
@@ -62,6 +63,13 @@ def m1_to_m2_flow_event(m1_flow: M1FlowEvent) -> M2FlowEvent:
 
     return M2FlowEvent(
         flow_id=m1_flow.flow_id,
+        conversation_id=m1_flow.conversation_id,
+        entity_id=m1_flow.entity_id,
+        sensor_id=m1_flow.sensor_id,
+        event_time=m1_flow.event_time,
+        ingest_time=m1_flow.ingest_time,
+        processing_time=m1_flow.processing_time,
+        alert_time=m1_flow.alert_time,
         src_ip=m1_flow.src_ip,
         dst_ip=m1_flow.dst_ip,
         src_port=m1_flow.src_port,
@@ -75,6 +83,9 @@ def m1_to_m2_flow_event(m1_flow: M1FlowEvent) -> M2FlowEvent:
         tcp_flags=tcp_flags,
         packet_lengths=list(m1_flow.packet_lengths) if m1_flow.packet_lengths else [],
         inter_arrival_times_ms=list(m1_flow.inter_arrival_times_ms) if m1_flow.inter_arrival_times_ms else [],
+        dns=metadata_to_dict(m1_flow.dns),
+        tls=metadata_to_dict(m1_flow.tls),
+        quic=metadata_to_dict(m1_flow.quic),
     )
 
 

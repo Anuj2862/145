@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple
 import uuid
 
-from schemas import Incident, Alert, DetectionSignal, ThreatStage, Severity
+from schemas import Incident, Alert, DetectionSignal, ThreatStage, Severity, FusionResult
 from fusion.engine import ActiveCorrelationGroup
 from evidence.engine import EvidenceEngine
 from entity.memory import EntityMemory
@@ -27,8 +27,9 @@ class IncidentBuilder:
         group: ActiveCorrelationGroup,
         entity_memory: Optional[EntityMemory] = None,
         graph: Optional[EntityBehaviourGraph] = None,
+        fusion_result: Optional[FusionResult] = None,
     ) -> Incident:
-        """Construct a validated Incident model from an ActiveCorrelationGroup."""
+        """Construct a validated Incident model from an ActiveCorrelationGroup or FusionResult."""
         if not group.signals:
             raise ValueError("Cannot build incident from empty correlation group")
 
@@ -42,8 +43,12 @@ class IncidentBuilder:
             pps_val = sorted_signals[-1].indicators.get("packets_per_sec", 0.0)
             deviation = profile.compute_pps_z_score(pps_val)
 
-        # Fused risk and severity
-        risk_score, severity = group.compute_composite_risk(baseline_deviation=deviation)
+        # Canonical Fused Risk & Severity (P1-8: Single source of truth)
+        if fusion_result is not None:
+            risk_score = fusion_result.fused_risk
+            severity = fusion_result.severity
+        else:
+            risk_score, severity = group.compute_composite_risk(baseline_deviation=deviation)
 
         # Build chronological threat stages
         threat_stages: List[ThreatStage] = [

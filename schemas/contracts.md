@@ -31,11 +31,18 @@
 ```json
 {
   "flow_id": "10.0.0.15:49200-198.51.100.2:443-6",
+  "conversation_id": "10.0.0.15:49200<->198.51.100.2:443-6",
+  "entity_id": "10.0.0.15",
+  "sensor_id": "sensor-edge-01",
   "src_ip": "10.0.0.15",
   "dst_ip": "198.51.100.2",
   "src_port": 49200,
   "dst_port": 443,
   "protocol": 6,
+  "event_time": 1785405600.123456,
+  "ingest_time": 1785405600.223456,
+  "processing_time": 1785405600.323456,
+  "alert_time": null,
   "start_time_iso": "2026-08-30T10:00:00.123456Z",
   "end_time_iso": "2026-08-30T10:00:05.123456Z",
   "duration_sec": 5.0,
@@ -48,9 +55,41 @@
     "rst_count": 0
   },
   "packet_lengths": [64, 1500, 1500, 128],
-  "inter_arrival_times_ms": [10.2, 15.4, 12.1]
+  "inter_arrival_times_ms": [10.2, 15.4, 12.1],
+  "dns": {
+    "query_name": "example.test",
+    "query_type": "A",
+    "response_code": "NOERROR",
+    "answer_count": 1
+  },
+  "tls": {
+    "sni": "example.test",
+    "alpn": "h2",
+    "ja3_hash": "771,...",
+    "ja4_hash": "t13d1516h2_...",
+    "tls_version": "1.3"
+  },
+  "quic": {
+    "sni": "example.test",
+    "alpn": "h3",
+    "version": "1",
+    "connection_id": "optional-passive-id"
+  }
 }
 ```
+
+`flow_id` remains the directional 5-tuple identity. `conversation_id`
+is a deterministic bidirectional grouping key for analysis only; state
+updates must still work when only one direction is observed. `entity_id`
+defaults to the source IP, or `sensor_id:src_ip` when a non-default
+sensor is supplied.
+
+Time fields are intentionally separated:
+
+- `event_time`: capture/network observation time used for traffic reasoning.
+- `ingest_time`: time the packet/event entered the pipeline.
+- `processing_time`: time the pipeline processed the event.
+- `alert_time`: time an alert was emitted, when applicable.
 
 ---
 

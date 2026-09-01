@@ -65,6 +65,9 @@ class DetectionContext:
     recon_features: Optional[ReconFeatures] = None
     exfil_features: Optional[ExfiltrationFeatures] = None
 
+    # Entity state / baseline profile
+    entity_profile: Optional[Any] = None
+
 
 # ---------------------------------------------------------------------------
 # DetectorResult — wraps success OR failure for a single detector run
@@ -122,7 +125,7 @@ class _DetectorWrapper:
                         detector_name=self.name,
                         error="FeatureVector not provided in DetectionContext",
                     )
-                signal = d.evaluate(ctx.feature_vector)
+                signal = d.evaluate(ctx.feature_vector, entity_profile=ctx.entity_profile)
 
             elif isinstance(d, C2BeaconDetector):
                 if ctx.feature_vector is None:
@@ -130,8 +133,11 @@ class _DetectorWrapper:
                         detector_name=self.name,
                         error="FeatureVector not provided in DetectionContext",
                     )
-                signal = d.evaluate(ctx.feature_vector,
-                                    observation_count=ctx.observation_count)
+                signal = d.evaluate(
+                    ctx.feature_vector,
+                    observation_count=ctx.observation_count,
+                    entity_profile=ctx.entity_profile,
+                )
 
             elif isinstance(d, ReconDetector):
                 if ctx.recon_features is None:
@@ -143,6 +149,7 @@ class _DetectorWrapper:
                     ctx.recon_features,
                     source_entity=ctx.source_entity,
                     timestamp_iso=ctx.timestamp_iso,
+                    entity_profile=ctx.entity_profile,
                 )
 
             elif isinstance(d, ExfiltrationDetector):
@@ -155,6 +162,7 @@ class _DetectorWrapper:
                     ctx.exfil_features,
                     source_entity=ctx.source_entity,
                     timestamp_iso=ctx.timestamp_iso,
+                    entity_profile=ctx.entity_profile,
                 )
 
             else:

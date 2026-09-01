@@ -25,3 +25,10 @@ htmlcov/
 .idea/
 .DS_Store
 Thumbs.db
+
+
+# Local AI/IDE configuration
+.claude/
+
+# Generated processed datasets
+dataset/processed_v2/

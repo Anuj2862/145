@@ -98,6 +98,33 @@ class TestFlowEvent(unittest.TestCase):
         self.assertEqual(event.ack_ratio, 0.95)
         self.assertEqual(event.iat_mean_ms, 100.0)
 
+    def test_canonical_phase2_fields_are_deterministic_defaults(self):
+        event = _event()
+
+        self.assertEqual(event.event_time, 100.0)
+        self.assertEqual(event.sensor_id, "unknown")
+        self.assertEqual(event.entity_id, "10.0.0.1")
+        self.assertEqual(
+            event.conversation_id,
+            "10.0.0.1:49152<->198.51.100.1:443-6",
+        )
+
+    def test_canonical_phase2_fields_are_serialized(self):
+        event = FlowEvent(
+            **{
+                **_event().to_dict(),
+                "ingest_time": 101.0,
+                "processing_time": 102.0,
+                "alert_time": 103.0,
+            }
+        )
+        data = json.loads(event.to_json())
+
+        self.assertEqual(data["event_time"], 100.0)
+        self.assertEqual(data["ingest_time"], 101.0)
+        self.assertEqual(data["processing_time"], 102.0)
+        self.assertEqual(data["alert_time"], 103.0)
+
 
 if __name__ == "__main__":
     unittest.main()

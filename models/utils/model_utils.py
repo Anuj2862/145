@@ -10,6 +10,8 @@ import random
 from typing import Dict, Any, List, Optional
 import numpy as np
 
+from features.feature_contract import MODEL_FEATURE_SCHEMA_VERSION
+
 
 def set_random_seed(seed: int = 42) -> None:
     """Set random seed across standard library and numpy for reproducibility."""
@@ -60,9 +62,12 @@ def create_experiment_metadata(
     """Construct a standardized experiment metadata record."""
     metadata = {
         "model_name": model_name,
+        "model_version": "1.0.0",
         "random_seed": random_seed,
         "num_features": len(feature_names),
         "feature_names": feature_names,
+        "feature_schema_version": MODEL_FEATURE_SCHEMA_VERSION,
+        "compatibility_status": "current",
         "label_map": label_map,
         "hyperparameters": hyperparams,
     }

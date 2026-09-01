@@ -3,6 +3,7 @@
 from incidents.alert_builder import build_alert_from_signal
 from incidents.formatter import alert_to_json, alert_from_json, format_alert_cli
 from incidents.incident_builder import IncidentBuilder
+from incidents.lifecycle_engine import IncidentLifecycleEngine, LifecycleConfig
 
 __all__ = [
     "build_alert_from_signal",
@@ -10,4 +11,6 @@ __all__ = [
     "alert_from_json",
     "format_alert_cli",
     "IncidentBuilder",
+    "IncidentLifecycleEngine",
+    "LifecycleConfig",
 ]

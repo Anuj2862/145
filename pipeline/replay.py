@@ -238,6 +238,8 @@ def replay_pcap(
                         flow_id=flow_id,
                         key=key,
                         features=features,
+                        flow_state=flow_state,
+                        processing_time=latest_processing_wall_timestamp,
                     )
                     if event_callback is not None:
                         event_callback(flow_evt)
@@ -496,10 +498,30 @@ def _flow_event_from_features(
     flow_id: str,
     key: FlowKey,
     features: FlowFeatures,
+    flow_state=None,
+    processing_time: float | None = None,
 ) -> FlowEvent:
     return FlowEvent(
         timestamp=timestamp,
+        event_time=timestamp,
+        ingest_time=(
+            getattr(flow_state, "ingest_time", None)
+            if flow_state is not None
+            else None
+        ),
+        processing_time=processing_time,
+        sensor_id=(
+            getattr(flow_state, "sensor_id", "unknown")
+            if flow_state is not None
+            else "unknown"
+        ),
         flow_id=flow_id,
+        conversation_id=key.conversation_id,
+        entity_id=(
+            getattr(flow_state, "entity_id", key.src_ip)
+            if flow_state is not None
+            else key.src_ip
+        ),
         src_ip=key.src_ip,
         dst_ip=key.dst_ip,
         src_port=key.src_port,
@@ -530,6 +552,21 @@ def _flow_event_from_features(
         iat_std_ms=features.iat_std_ms,
         packet_lengths=features.packet_lengths,
         inter_arrival_times_ms=features.inter_arrival_times_ms,
+        dns=(
+            getattr(flow_state, "dns", None)
+            if flow_state is not None
+            else None
+        ),
+        tls=(
+            getattr(flow_state, "tls", None)
+            if flow_state is not None
+            else None
+        ),
+        quic=(
+            getattr(flow_state, "quic", None)
+            if flow_state is not None
+            else None
+        ),
     )
 
 

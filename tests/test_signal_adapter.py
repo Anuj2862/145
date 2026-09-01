@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 import pytest
 
 from schemas.flow_event import FlowEvent as M1FlowEvent
+from schemas.telemetry import DNSMetadata as M1DNSMetadata
 from schemas import (
     FlowEvent as M2FlowEvent,
     TCPFlags,
@@ -115,6 +116,29 @@ def test_m1_to_m2_non_tcp_protocol():
     m2_flow = adapter.m1_to_m2_flow_event(m1_flow)
     assert m2_flow.protocol == 17
     assert m2_flow.tcp_flags is None
+
+
+def test_m1_to_m2_preserves_canonical_metadata():
+    m1_flow = make_m1_flow()
+    m1_flow = M1FlowEvent(
+        **{
+            **m1_flow.to_dict(),
+            "sensor_id": "sensor-a",
+            "entity_id": None,
+            "ingest_time": 1600000000.5,
+            "processing_time": 1600000000.6,
+            "dns": M1DNSMetadata(query_name="example.test", query_type="A"),
+        }
+    )
+
+    m2_flow = adapter.m1_to_m2_flow_event(m1_flow)
+
+    assert m2_flow.event_time == m1_flow.event_time
+    assert m2_flow.ingest_time == 1600000000.5
+    assert m2_flow.processing_time == 1600000000.6
+    assert m2_flow.entity_id == "sensor-a:10.0.0.1"
+    assert m2_flow.conversation_id == m1_flow.conversation_id
+    assert m2_flow.dns.query_name == "example.test"
 
 
 # ---------------------------------------------------------------------------

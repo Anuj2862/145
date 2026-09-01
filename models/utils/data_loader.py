@@ -10,7 +10,10 @@ from typing import Tuple, List, Dict, Any
 import numpy as np
 import pandas as pd
 
-EXPECTED_FEATURE_COUNT = 52
+from features.feature_contract import LEGACY_MODEL_FEATURE_NAMES, validate_feature_schema
+
+
+EXPECTED_FEATURE_COUNT = len(LEGACY_MODEL_FEATURE_NAMES)
 
 FORBIDDEN_COLUMNS = [
     "recent_risk",
@@ -33,18 +36,18 @@ def validate_feature_matrix(df: pd.DataFrame, split_name: str) -> List[str]:
     # 1. Separate features from target label column if present
     feature_cols = [c for c in df.columns if c != "label"]
 
-    # 2. Check feature count
-    if len(feature_cols) != EXPECTED_FEATURE_COUNT:
-        raise ValueError(
-            f"Dataset split '{split_name}' contains {len(feature_cols)} features, "
-            f"expected exactly {EXPECTED_FEATURE_COUNT} features."
-        )
-
-    # 3. Check for forbidden leakage / identifier columns
+    # 2. Check for forbidden leakage / identifier columns
     forbidden_found = set(feature_cols).intersection(FORBIDDEN_COLUMNS)
     if forbidden_found:
         raise ValueError(
             f"Forbidden leakage/metadata column(s) detected in split '{split_name}': {forbidden_found}"
+        )
+
+    # 3. Check feature count
+    if len(feature_cols) != EXPECTED_FEATURE_COUNT:
+        raise ValueError(
+            f"Dataset split '{split_name}' contains {len(feature_cols)} features, "
+            f"expected exactly {EXPECTED_FEATURE_COUNT} features."
         )
 
     # 4. Check for NaN / missing values
@@ -67,6 +70,11 @@ def validate_feature_matrix(df: pd.DataFrame, split_name: str) -> List[str]:
         raise ValueError(
             f"Non-numeric feature column(s) detected in split '{split_name}': {non_numeric}"
         )
+
+    validate_feature_schema(
+        actual_feature_names=feature_cols,
+        expected_feature_names=LEGACY_MODEL_FEATURE_NAMES,
+    ).raise_for_error()
 
     return feature_cols
 

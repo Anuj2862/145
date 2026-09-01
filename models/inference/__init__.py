@@ -6,6 +6,7 @@ and DetectionSignal adapter mapping for downstream integration.
 
 from models.inference.ml_inference import (
     MLInferenceEngine,
+    V2MLInferenceEngine,
     ClassificationResult,
     AnomalyResult,
     UnifiedMLResult,
@@ -20,6 +21,7 @@ from models.inference.signal_adapter import (
 
 __all__ = [
     "MLInferenceEngine",
+    "V2MLInferenceEngine",
     "ClassificationResult",
     "AnomalyResult",
     "UnifiedMLResult",
