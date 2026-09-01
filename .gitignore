@@ -27,8 +27,12 @@ htmlcov/
 Thumbs.db
 
 
+
 # Local AI/IDE configuration
 .claude/
 
 # Generated processed datasets
 dataset/processed_v2/
+
+# Generated retraining candidates
+evaluation/candidates/
