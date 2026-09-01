@@ -14,6 +14,21 @@ from enum import Enum
 from datetime import datetime, timezone
 from pydantic import BaseModel, Field, ConfigDict, model_validator
 
+from schemas.provenance import (
+    FEATURE_SCHEMA_VERSION,
+    FEATURE_COUNT,
+    MODEL_VERSION,
+    DETECTOR_VERSION,
+    ANOMALY_MODEL_VERSION,
+    CALIBRATOR_VERSION,
+    DETECTOR_VERSIONS,
+    MODEL_VERSIONS,
+    LEGACY_FEATURE_SCHEMA_VERSION,
+    LEGACY_MODEL_FEATURE_SCHEMA_VERSION,
+    get_runtime_provenance,
+)
+
+
 from schemas.telemetry import UNKNOWN_SENSOR_ID
 from schemas.telemetry import canonical_conversation_id
 from schemas.telemetry import canonical_entity_id
@@ -263,8 +278,8 @@ class DetectionSignal(BaseModel):
     timestamp_iso: str = Field(..., description="Detection timestamp in ISO 8601")
     evidence: List[EvidenceItem] = Field(default_factory=list, description="Structured evidence items")
     indicators: Dict[str, Any] = Field(default_factory=dict, description="Key metrics triggering detection")
-    feature_schema_version: str = Field(default="feature-schema-v2.0.0", description="Feature schema contract version")
-    detector_version: Optional[str] = Field(default="2.0.0", description="Semantic version of detector")
+    feature_schema_version: str = Field(default=FEATURE_SCHEMA_VERSION, description="Feature schema contract version")
+    detector_version: Optional[str] = Field(default=DETECTOR_VERSION, description="Semantic version of detector")
 
     # Phase 2C Provenance & Explainability (Backwards-compatible)
     detector_id: Optional[str] = Field(default=None, description="Identifying name of detector algorithm")

@@ -54,7 +54,7 @@
 ## 5. API & Dashboard Safety Audit
 
 - **API Files Audited:** 2
-- **Endpoints Found:** 11
+- **Endpoints Found:** 16
 - **Actuation / Mitigation Endpoints:** 0
 
 ---

@@ -10,6 +10,7 @@ Provides standardized Pydantic contract models for:
 """
 
 from __future__ import annotations
+from schemas.provenance import FEATURE_SCHEMA_VERSION, DETECTOR_VERSIONS, MODEL_VERSIONS
 
 import hashlib
 import json
@@ -162,9 +163,9 @@ class Incident(BaseModel):
     severity_history: List[Tuple[float, str]] = Field(default_factory=list, description="History of (event_time, severity)")
 
     # Provenance
-    feature_schema_version: str = Field(default="feature-schema-v2.1.0", description="Feature schema contract version")
-    detector_versions: Dict[str, str] = Field(default_factory=dict, description="Active detector versions")
-    model_versions: Dict[str, str] = Field(default_factory=dict, description="Active model versions")
+    feature_schema_version: str = Field(default=FEATURE_SCHEMA_VERSION, description="Feature schema contract version")
+    detector_versions: Dict[str, str] = Field(default_factory=lambda: dict(DETECTOR_VERSIONS), description="Active detector versions")
+    model_versions: Dict[str, str] = Field(default_factory=lambda: dict(MODEL_VERSIONS), description="Active model versions")
 
     # Backward-compatible fields
     primary_entity: Optional[str] = None

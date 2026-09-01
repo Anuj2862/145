@@ -1,0 +1,64 @@
+{
+  "milestone": "M23",
+  "title": "Final SOC / Analyst Dashboard Integration",
+  "timestamp_iso": "2026-09-01T13:22:17.636925+00:00",
+  "compliance_enclave": "PS 26145",
+  "tests": {
+    "static_ui_assets": {
+      "status": "PASS",
+      "index_bytes": 14145,
+      "css_bytes": 19214,
+      "js_bytes": 24601
+    },
+    "system_health_and_metrics": {
+      "status": "PASS",
+      "passive_enclave": true,
+      "diode_rx_active": true,
+      "p95_latency_ms": 2.85,
+      "queue_depth": 0,
+      "dropped_events": 0
+    },
+    "security_boundary": {
+      "status": "PASS",
+      "passive_ingest": "YES",
+      "active_response": "DISABLED / NONE",
+      "payload_decryption": "NONE",
+      "zero_mitigation_endpoints_verified": true
+    },
+    "incident_dossier_and_risk_separation": {
+      "status": "PASS",
+      "canonical_provenance_verified": true,
+      "feature_schema_version": "feature-schema-v2.1.0",
+      "feature_count": 56,
+      "model_version": "v2.1.0-calibrated-lgb",
+      "incidents_count": 3,
+      "dossier_contract_verified": true,
+      "sample_fused_risk": 0.99,
+      "sample_ml_probability": 0.92,
+      "sample_confidence": 0.97,
+      "sample_severity": "CRITICAL"
+    },
+    "deterministic_replay_pipeline": {
+      "status": "PASS",
+      "stages_replayed": 5,
+      "alerts_generated": 5,
+      "timeline_events_count": 5,
+      "chronological_ordering_verified": true,
+      "evidence_items_count": 9
+    },
+    "workspace_integrity": {
+      "status": "PASS",
+      "repository_root": "D:\\SIH\\145_v2",
+      "git_branch": "member-1/phase2-upgrade",
+      "forbidden_entries_count": 0,
+      "violations_count": 0,
+      "reparse_points_count": 0
+    }
+  },
+  "summary": {
+    "all_tests_passed": true,
+    "verdict": "PASS",
+    "total_test_groups": 6,
+    "passed_test_groups": 6
+  }
+}

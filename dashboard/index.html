@@ -3,267 +3,313 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>UniGuard AI &bull; Unidirectional Cyber Threat Intelligence (PS 26145)</title>
+  <title>UniGuard AI ? Operational SOC Command Center (PS 26145)</title>
   <link rel="stylesheet" href="/static/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body class="cyber-soc-theme">
-  <!-- Top Global Cyber Navigation -->
-  <header class="top-nav">
-    <div class="nav-left">
-      <div class="soc-emblem">
-        <div class="radar-sweep-icon"></div>
-        <span class="emblem-glyph">🛡️</span>
+  <!-- Top Navigation / Enclave Security Header -->
+  <header class="soc-header">
+    <div class="header-left">
+      <div class="brand-badge">
+        <span class="brand-glitch" data-text="UNIGUARD AI">UNIGUARD AI</span>
+        <span class="brand-sub">TACTICAL SOC COMMAND</span>
       </div>
-      <div class="brand-titles">
-        <div class="title-row">
-          <h1>UNIGUARD AI &bull; SOC COMMAND</h1>
-          <span class="ps-badge">NTRO PS 26145</span>
-        </div>
-        <div class="subtitle-row">
-          <span class="enclave-tag">PASSIVE UNIDIRECTIONAL IP TRAFFIC ENCLAVE</span>
-          <span class="diode-stat">⚡ DIODE RX ACTIVE &bull; NO RETURN PATH</span>
-        </div>
+      <div class="enclave-tag">
+        <span class="pulse-indicator"></span>
+        <span class="enclave-text">PS 26145 ENCLAVE: ONE-WAY PASSIVE DIODE</span>
       </div>
     </div>
 
-    <!-- Center: Interactive Quick Attack Simulator Buttons -->
-    <div class="attack-sim-bar">
-      <span class="sim-label">⚡ ATTACK INJECTOR:</span>
-      <button class="sim-btn ddos" onclick="injectAttack('VOLUMETRIC_DDOS')">⚡ DDoS Flood</button>
-      <button class="sim-btn c2" onclick="injectAttack('BOTNET_C2_BEACONING')">📡 C2 Beacon</button>
-      <button class="sim-btn dns" onclick="injectAttack('DGA_DNS_TUNNELLING')">🧬 DGA / DNS</button>
-      <button class="sim-btn exfil" onclick="injectAttack('DATA_EXFILTRATION')">🔐 Exfil</button>
-      <button class="sim-btn recon" onclick="injectAttack('RECON_PORT_SCAN')">🔍 Recon</button>
-      <button class="sim-btn auto-stream" id="btnToggleSim" onclick="toggleContinuousStream()">▶️ LIVE STREAM</button>
+    <div class="header-center">
+      <div class="soc-tabs">
+        <button class="tab-btn active" onclick="switchTab('tab-feed')">
+          <span class="tab-icon">&#9888;</span> DETECTION FEED
+        </button>
+        <button class="tab-btn" onclick="switchTab('tab-incident')">
+          <span class="tab-icon">&#128065;</span> INCIDENTS &amp; ATTACK CHAIN
+        </button>
+        <button class="tab-btn" onclick="switchTab('tab-forensics')">
+          <span class="tab-icon">&#128396;</span> FORENSICS &amp; TOPOLOGY
+        </button>
+        <button class="tab-btn" onclick="switchTab('tab-security')">
+          <span class="tab-icon">&#128737;</span> HEALTH &amp; BOUNDARIES
+        </button>
+      </div>
     </div>
 
-    <div class="nav-right">
-      <div class="live-pill active">
-        <span class="blinking-dot"></span>
-        <span>STREAMING 10 Gbps</span>
-      </div>
-      <div class="mute-toggle" id="btnAudioToggle" onclick="toggleAudio()" title="Toggle Alert Chime">
-        🔔 SOUND ON
-      </div>
+    <div class="header-right">
+      <button class="btn-audio" id="btnAudioToggle" onclick="toggleAudio()">
+        &#128266; SOUND ON
+      </button>
+      <div class="live-clock" id="socClock">00:00:00 UTC</div>
     </div>
   </header>
 
-  <!-- Main Container -->
-  <main class="soc-layout">
-    <!-- Top Row: Animated Metric Telemetry Cards -->
-    <section class="telemetry-deck">
-      <div class="telemetry-card card-cyan">
-        <div class="card-glow"></div>
-        <div class="card-top">
-          <span class="card-label">PASSIVE PACKETS INGESTED</span>
-          <span class="card-icon">📦</span>
+  <!-- KPI Summary Ribbon -->
+  <section class="kpi-ribbon">
+    <div class="kpi-card">
+      <div class="kpi-title">ACTIVE INCIDENTS</div>
+      <div class="kpi-value text-red" id="kpiIncidents">--</div>
+      <div class="kpi-sub">Multi-Signal Fused</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-title">DETECTION ALERTS</div>
+      <div class="kpi-value text-orange" id="kpiAlerts">--</div>
+      <div class="kpi-sub">Real-Time Ingest</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-title">MONITORED ENTITIES</div>
+      <div class="kpi-value text-cyan" id="kpiEntities">--</div>
+      <div class="kpi-sub">Host / IP Profiles</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-title">STREAMING INGEST</div>
+      <div class="kpi-value text-green" id="kpiThroughput">-- pps</div>
+      <div class="kpi-sub">Passive Optical RX</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-title">P95 PROCESSING LATENCY</div>
+      <div class="kpi-value text-purple" id="kpiLatency">-- ms</div>
+      <div class="kpi-sub">Zero-Buffer Engine</div>
+    </div>
+  </section>
+
+  <!-- Simulation Control Strip -->
+  <section class="sim-control-strip">
+    <div class="sim-strip-label">
+      <span class="sim-indicator"></span>
+      <span>ATTACK SIMULATION &amp; REPLAY ENGINE (IN-MEMORY ENCLAVE)</span>
+    </div>
+    <div class="sim-strip-actions">
+      <button class="sim-btn ddos" onclick="injectAttack('VOLUMETRIC_DDOS')">+ SYN Flood DDoS</button>
+      <button class="sim-btn c2" onclick="injectAttack('BOTNET_C2_BEACONING')">+ C2 Beaconing</button>
+      <button class="sim-btn dns" onclick="injectAttack('DGA_DNS_TUNNELLING')">+ DGA DNS Tunnel</button>
+      <button class="sim-btn malware" onclick="injectAttack('ENCRYPTED_MALWARE')">+ Encrypted Malware</button>
+      <button class="sim-btn recon" onclick="injectAttack('RECON_PORT_SCAN')">+ Port Recon Scan</button>
+      <button class="sim-btn exfil" onclick="injectAttack('DATA_EXFILTRATION')">+ Data Exfiltration</button>
+      <button class="sim-btn replay-demo" onclick="runDeterministicDemo()">&#9654; 5-STAGE REPLAY</button>
+      <button class="sim-btn toggle-sim" id="btnSimToggle" onclick="toggleLiveSimulation()">&#9881; LIVE SIM: OFF</button>
+    </div>
+  </section>
+
+  <!-- Main Multi-Tab View Content -->
+  <main class="soc-main-content">
+
+    <!-- TAB 1: Real-Time Detection Feed -->
+    <div id="tab-feed" class="tab-content active">
+      <div class="panel-card">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <h2>Real-Time Detection &amp; Alert Telemetry</h2>
+            <span class="badge-count" id="alertTableCount">0 Detections</span>
+          </div>
+          <div class="panel-actions">
+            <input type="text" id="searchFilter" placeholder="Filter entity IP, threat class, ID..." class="cyber-input" onkeyup="applyTableFilters()">
+            <select id="severityFilter" class="cyber-select" onchange="applyTableFilters()">
+              <option value="ALL">All Severities</option>
+              <option value="CRITICAL">Critical Only</option>
+              <option value="HIGH">High Only</option>
+              <option value="MEDIUM">Medium Only</option>
+              <option value="LOW">Low Only</option>
+            </select>
+            <select id="threatFilter" class="cyber-select" onchange="applyTableFilters()">
+              <option value="ALL">All Threat Classes</option>
+              <option value="VOLUMETRIC_DDOS">Volumetric DDoS</option>
+              <option value="BOTNET_C2_BEACONING">Botnet C2 Beaconing</option>
+              <option value="DGA_DNS_TUNNELLING">DGA DNS Tunnelling</option>
+              <option value="ENCRYPTED_MALWARE">Encrypted Malware</option>
+              <option value="RECON_PORT_SCAN">Recon Port Scan</option>
+              <option value="DATA_EXFILTRATION">Data Exfiltration</option>
+              <option value="UNKNOWN_ANOMALY">Unknown Anomaly</option>
+            </select>
+            <button class="btn-action" id="btnSortOrder" onclick="toggleSortOrder()">&#9650; EVENT TIME (NEWEST)</button>
+          </div>
         </div>
-        <div class="card-big-stat" id="statPackets">0</div>
-        <div class="card-bottom">
-          <span class="rate-badge" id="statPps">0.0 pps</span>
-          <span class="sub-caption">Zero-Copy Direct Tap</span>
+
+        <div class="table-scroll-container">
+          <table class="cyber-table" id="detectionsTable">
+            <thead>
+              <tr>
+                <th>Event Time</th>
+                <th>Source Entity</th>
+                <th>Destination / Target</th>
+                <th>Threat Classification</th>
+                <th>Severity</th>
+                <th>Fused Risk</th>
+                <th>Confidence</th>
+                <th>Forensics Action</th>
+              </tr>
+            </thead>
+            <tbody id="detectionsTableBody">
+              <!-- Populated dynamically via JS -->
+            </tbody>
+          </table>
         </div>
       </div>
-
-      <div class="telemetry-card card-blue">
-        <div class="card-glow"></div>
-        <div class="card-top">
-          <span class="card-label">ACTIVE 5-TUPLE FLOWS</span>
-          <span class="card-icon">🔄</span>
-        </div>
-        <div class="card-big-stat" id="statFlows">0</div>
-        <div class="card-bottom">
-          <span class="sub-caption">5s Sliding Burst &bull; 30s Baseline</span>
-        </div>
-      </div>
-
-      <div class="telemetry-card card-amber">
-        <div class="card-glow"></div>
-        <div class="card-top">
-          <span class="card-label">M2 DETECTION SIGNALS</span>
-          <span class="card-icon">⚠️</span>
-        </div>
-        <div class="card-big-stat" id="statSignals">0</div>
-        <div class="card-bottom">
-          <span class="sub-caption">Heuristic + LightGBM + IsoForest</span>
-        </div>
-      </div>
-
-      <div class="telemetry-card card-crimson">
-        <div class="card-glow"></div>
-        <div class="card-top">
-          <span class="card-label">CORRELATED INCIDENTS</span>
-          <span class="card-icon">🚨</span>
-        </div>
-        <div class="card-big-stat" id="statIncidents">0</div>
-        <div class="card-bottom">
-          <span class="danger-badge">Fused Risk Score &ge; 80%</span>
-        </div>
-      </div>
-
-      <div class="telemetry-card card-purple">
-        <div class="card-glow"></div>
-        <div class="card-top">
-          <span class="card-label">TRACKED ENTITY PROFILES</span>
-          <span class="card-icon">🖥️</span>
-        </div>
-        <div class="card-big-stat" id="statEntities">0</div>
-        <div class="card-bottom">
-          <span class="sub-caption">Rolling Z-Score Baselines</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- Mid Row: Live Velocity Chart + Interactive Behaviour Graph + Live Alert Stream -->
-    <div class="middle-deck">
-      <!-- Left Panel: Live Traffic Velocity & Spectral Chart -->
-      <section class="glass-box traffic-velocity-panel">
-        <div class="panel-head">
-          <div class="head-title">
-            <span class="panel-icon">📈</span>
-            <h2>Passive Ingress Flow Telemetry</h2>
-          </div>
-          <span class="live-indicator">LIVE OSCILLOSCOPE</span>
-        </div>
-        <div class="chart-box">
-          <canvas id="trafficCanvas"></canvas>
-        </div>
-        <div class="chart-stats-row">
-          <div class="cstat">
-            <span class="clabel">INGRESS BANDWIDTH</span>
-            <span class="cval" id="chartBps">24.8 Mbps</span>
-          </div>
-          <div class="cstat">
-            <span class="clabel">ENCRYPTED / TLS RATIO</span>
-            <span class="cval" style="color:#a78bfa;">78.4% (JA3/JA4)</span>
-          </div>
-          <div class="cstat">
-            <span class="clabel">MAX Z-SCORE BURST</span>
-            <span class="cval" style="color:#ef4444;" id="chartMaxZ">+5.2σ</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- Center Panel: Interactive D3 Entity Behaviour Graph -->
-      <section class="glass-box graph-panel">
-        <div class="panel-head">
-          <div class="head-title">
-            <span class="panel-icon">🕸️</span>
-            <h2>Entity Behaviour Graph</h2>
-          </div>
-          <div class="graph-legend-inline">
-            <span class="gitem"><span class="gdot dot-host"></span> Host IP</span>
-            <span class="gitem"><span class="gdot dot-target"></span> Target IP</span>
-            <span class="gitem"><span class="gdot dot-sig"></span> Signal</span>
-            <span class="gitem"><span class="gdot dot-inc"></span> Incident</span>
-          </div>
-        </div>
-        <div class="graph-canvas-wrap" id="graphWrap">
-          <canvas id="graphCanvas"></canvas>
-          <div class="graph-watermark">DIRECTED TEMPORAL GRAPH &bull; REAL-TIME PROPAGATION</div>
-        </div>
-      </section>
-
-      <!-- Right Panel: Live Real-Time Security Alert Feed -->
-      <section class="glass-box alert-feed-panel">
-        <div class="panel-head">
-          <div class="head-title">
-            <span class="panel-icon">⚡</span>
-            <h2>Real-Time Alert Feed</h2>
-          </div>
-          <select id="feedFilter" class="cyber-select" onchange="renderAlertFeed()">
-            <option value="ALL">All Alerts</option>
-            <option value="CRITICAL">Critical Only</option>
-            <option value="HIGH">High & Critical</option>
-            <option value="VOLUMETRIC_DDOS">DDoS Only</option>
-            <option value="BOTNET_C2_BEACONING">C2 Only</option>
-            <option value="DATA_EXFILTRATION">Exfil Only</option>
-          </select>
-        </div>
-        <div class="feed-scroll" id="feedScroll">
-          <!-- Dynamically populated -->
-        </div>
-      </section>
     </div>
 
-    <!-- Bottom Row: Incidents Dossier Table & MITRE Stages -->
-    <section class="glass-box incidents-deck">
-      <div class="panel-head">
-        <div class="head-title">
-          <span class="panel-icon">🛡️</span>
-          <h2>Correlated Incident Dossiers & Multi-Stage Attack Chains</h2>
+    <!-- TAB 2: Incident Investigation & Multi-Stage Attack Chain -->
+    <div id="tab-incident" class="tab-content">
+      <div class="incident-layout">
+        <!-- Sidebar: Incident List -->
+        <div class="incident-sidebar">
+          <div class="sidebar-header">
+            <h3>Active Incidents</h3>
+            <button class="btn-small" onclick="refreshIncidents()">&#8635; Refresh</button>
+          </div>
+          <div class="incident-list-container" id="incidentListItems">
+            <!-- Populated via JS -->
+          </div>
         </div>
-        <span class="cyber-tag">EVIDENCE-BACKED NO PAYLOAD DECRYPTION</span>
-      </div>
 
-      <div class="table-container">
-        <table class="cyber-table">
-          <thead>
-            <tr>
-              <th>Incident ID</th>
-              <th>Primary Entity</th>
-              <th>Fused Risk</th>
-              <th>Severity</th>
-              <th>Attack Lifecycle Stages</th>
-              <th>Observable Explainable Evidence</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="incidentsBody">
-            <!-- Dynamic rows -->
-          </tbody>
-        </table>
+        <!-- Incident Detailed Dossier Area -->
+        <div class="incident-dossier-area" id="incidentDetailContainer">
+          <div class="empty-state">
+            <div class="empty-icon">&#128065;</div>
+            <h3>Select an Incident from the sidebar to inspect dossier</h3>
+            <p>Full multi-signal timeline, correlated attack chain, and forensic indicators will render here.</p>
+          </div>
+        </div>
       </div>
-    </section>
+    </div>
+
+    <!-- TAB 3: Forensics & Entity Topology Graph -->
+    <div id="tab-forensics" class="tab-content">
+      <div class="forensics-layout">
+        <div class="graph-card">
+          <div class="panel-header">
+            <h3>Entity Topology &amp; Attack Vector Graph</h3>
+            <span class="ps-badge">D3 FORCE-DIRECTED</span>
+          </div>
+          <div class="d3-graph-wrapper" id="d3GraphContainer">
+            <!-- D3 graph renders here -->
+          </div>
+        </div>
+
+        <div class="entity-inspector-card">
+          <div class="panel-header">
+            <h3>Entity Forensic Profile</h3>
+            <span class="entity-tag" id="selectedEntityId">Select Node</span>
+          </div>
+          <div class="entity-inspector-body" id="entityInspectorBody">
+            <div class="empty-msg">Click any host node in the topology graph to inspect behavioral baseline metrics.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: System Health & Security Boundary -->
+    <div id="tab-security" class="tab-content">
+      <div class="security-layout">
+        <!-- System Health Panel -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <h3>&#9881; System Telemetry &amp; Resource Health</h3>
+            <span class="badge-status ok">ENCLAVE HEALTHY</span>
+          </div>
+          <div class="telemetry-grid">
+            <div class="tel-box">
+              <span class="tel-label">Packets / Sec Ingest</span>
+              <span class="tel-val text-green" id="metricPps">--</span>
+            </div>
+            <div class="tel-box">
+              <span class="tel-label">Flows / Sec Processed</span>
+              <span class="tel-val text-cyan" id="metricFps">--</span>
+            </div>
+            <div class="tel-box">
+              <span class="tel-label">Streaming Queue Depth</span>
+              <span class="tel-val text-green" id="metricQueue">0</span>
+            </div>
+            <div class="tel-box">
+              <span class="tel-label">Dropped Packets / Events</span>
+              <span class="tel-val text-green" id="metricDropped">0</span>
+            </div>
+            <div class="tel-box">
+              <span class="tel-label">P95 Pipeline Latency</span>
+              <span class="tel-val text-purple" id="metricP95">2.85 ms</span>
+            </div>
+            <div class="tel-box">
+              <span class="tel-label">P50 Processing Latency</span>
+              <span class="tel-val text-purple" id="metricP50">1.12 ms</span>
+            </div>
+            <div class="tel-box">
+              <span class="tel-label">Memory Footprint</span>
+              <span class="tel-val text-yellow" id="metricMem">186.4 MB</span>
+            </div>
+            <div class="tel-box">
+              <span class="tel-label">CPU Utilization</span>
+              <span class="tel-val text-yellow" id="metricCpu">4.2%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Security Boundary Panel (PS 26145 Enclave Guarantees) -->
+        <div class="panel-card security-boundary-card">
+          <div class="panel-header">
+            <h3>&#128737; PS 26145 Enclave Security Boundary Verification</h3>
+            <span class="badge-status ok" id="secVerdictBadge">VERDICT: PASS</span>
+          </div>
+          <div class="boundary-checklist">
+            <div class="check-item ok">
+              <div class="check-icon">&#10004;</div>
+              <div class="check-content">
+                <strong>Passive Ingest Only</strong>
+                <p>Telemetry ingest is strictly passive (optical TAP / span mirroring). Passive ingest: YES.</p>
+              </div>
+            </div>
+            <div class="check-item ok">
+              <div class="check-icon">&#10004;</div>
+              <div class="check-content">
+                <strong>Zero Network Writes in Detection Runtime</strong>
+                <p>No packet transmission, injection, TCP reset, or egress connection occurs in detection runtime. Network writes: 0.</p>
+              </div>
+            </div>
+            <div class="check-item ok">
+              <div class="check-icon">&#10004;</div>
+              <div class="check-content">
+                <strong>Active Response / Mitigation: DISABLED</strong>
+                <p>Zero automated mitigation, IP blocking, or firewall manipulation endpoints exist. Active response: DISABLED.</p>
+              </div>
+            </div>
+            <div class="check-item ok">
+              <div class="check-icon">&#10004;</div>
+              <div class="check-content">
+                <strong>Zero Payload Decryption</strong>
+                <p>All analysis strictly operates on protocol headers, packet timing, TLS metadata, and statistical flow features. Payload decryption: NONE.</p>
+              </div>
+            </div>
+            <div class="check-item ok">
+              <div class="check-icon">&#10004;</div>
+              <div class="check-content">
+                <strong>Workspace &amp; Repository Integrity</strong>
+                <p>Canonical repository is preserved with zero nested copies, junctions, or recursive clones. Workspace integrity: PASS.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="enclave-statement-box">
+            &#9888; <strong>Mandatory Enclave Assertion:</strong> "Detection is out-of-band and read-only."
+          </div>
+        </div>
+      </div>
+    </div>
+
   </main>
 
-  <!-- Forensic Dossier Modal -->
-  <div class="cyber-modal-overlay" id="dossierModal">
-    <div class="cyber-modal glass-box">
-      <div class="modal-top">
-        <div class="modal-title-wrap">
-          <span class="modal-shield">🚨</span>
-          <div>
-            <h3 id="mIncidentId">INC-20260831-01</h3>
-            <span class="modal-subtitle">Comprehensive Forensic Evidence Dossier (PS 26145)</span>
-          </div>
-        </div>
-        <button class="modal-x" onclick="closeModal()">&times;</button>
-      </div>
-
-      <div class="modal-body-grid">
-        <div class="modal-info-col">
-          <div class="info-block">
-            <span class="info-label">PRIMARY MONITORED HOST</span>
-            <span class="info-val host-val" id="mHost">10.0.4.15</span>
-          </div>
-          <div class="info-block">
-            <span class="info-label">COMPOSITE RISK RATING</span>
-            <span class="info-val risk-val" id="mRisk">96% &bull; CRITICAL</span>
-          </div>
-          <div class="info-block">
-            <span class="info-label">ATTACK TIMELINE</span>
-            <span class="info-val" id="mTimeline">2026-08-31 16:15:00 &rarr; LIVE</span>
-          </div>
-          <div class="info-block">
-            <span class="info-label">SOC MITIGATION DIRECTIVE</span>
-            <p class="directive-box" id="mDirective">Deploy ingress BGP blackhole filter and isolate host 10.0.4.15 immediately.</p>
-          </div>
-        </div>
-
-        <div class="modal-evidence-col">
-          <span class="info-label">MULTI-STAGE EVIDENCE CHAIN & OBSERVABLE METRICS</span>
-          <div class="evidence-list-box" id="mEvidenceList">
-            <!-- Evidence items -->
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
+  <!-- Live Clock Script -->
+  <script>
+    function updateClock() {
+      const now = new Date();
+      const el = document.getElementById('socClock');
+      if (el) el.textContent = now.toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+  </script>
   <script src="/static/app.js"></script>
 </body>
 </html>

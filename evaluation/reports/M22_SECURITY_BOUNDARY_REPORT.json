@@ -108,7 +108,7 @@
     "status": "PASS"
   },
   "tls_decryption_audit": {
-    "decryption_matches_found": 3,
+    "decryption_matches_found": 6,
     "runtime_decryption_matches": 0,
     "matches": [
       {
@@ -126,10 +126,31 @@
         "classification": "A_OFFLINE_TESTERS_ONLY"
       },
       {
+        "file": "evaluation/runners/m23_dashboard_runner.py",
+        "line": 88,
+        "op_type": "payload_decryption",
+        "code": "r_sec.get(\"payload_decryption\") == \"NONE\" and",
+        "classification": "A_OFFLINE_TESTERS_ONLY"
+      },
+      {
+        "file": "evaluation/runners/m23_dashboard_runner.py",
+        "line": 97,
+        "op_type": "payload_decryption",
+        "code": "\"payload_decryption\": r_sec.get(\"payload_decryption\"),",
+        "classification": "A_OFFLINE_TESTERS_ONLY"
+      },
+      {
         "file": "tests/test_m22_security_boundary.py",
         "line": 42,
         "op_type": "payload_decryption",
         "code": "def test_no_tls_payload_decryption_metadata_only():",
+        "classification": "A_OFFLINE_TESTERS_ONLY"
+      },
+      {
+        "file": "tests/test_m23_soc_dashboard.py",
+        "line": 83,
+        "op_type": "payload_decryption",
+        "code": "assert sec_data[\"payload_decryption\"] == \"NONE\"",
         "classification": "A_OFFLINE_TESTERS_ONLY"
       }
     ],
@@ -145,7 +166,7 @@
   },
   "api_surface_audit": {
     "api_files_audited": 2,
-    "endpoints_found": 11,
+    "endpoints_found": 16,
     "actuation_endpoints": 0,
     "status": "PASS"
   },

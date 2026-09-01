@@ -65,7 +65,7 @@ class TestM15CommonDetectorContract(unittest.TestCase):
         self.assertEqual(sig.source_entity, "192.168.1.100")
         self.assertEqual(sig.entity_id, "192.168.1.100")
         self.assertEqual(sig.score, sig.confidence)
-        self.assertEqual(sig.feature_schema_version, "feature-schema-v2.0.0")
+        self.assertEqual(sig.feature_schema_version, "feature-schema-v2.1.0")
         self.assertEqual(sig.detector_version, "1.0.0")
         self.assertIsInstance(sig.evidence, list)
         self.assertGreater(len(sig.evidence), 0)
