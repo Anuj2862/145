@@ -341,3 +341,9 @@ from schemas.fusion import (
     FusionEvidenceItem,
     FusionResult,
 )
+
+
+from schemas.security import (
+    SecurityBoundaryEventType,
+    SecurityBoundaryEvent,
+)

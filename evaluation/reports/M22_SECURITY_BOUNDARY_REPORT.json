@@ -1,0 +1,168 @@
+{
+  "milestone": "M22",
+  "repository_root": "D:\\SIH\\145_v2",
+  "git_branch": "member-1/phase2-upgrade",
+  "workspace_integrity": {
+    "status": "PASS",
+    "repository_root": "D:\\SIH\\145_v2",
+    "git_branch": "member-1/phase2-upgrade",
+    "git_directories_count": 1,
+    "git_directories": [
+      "D:\\SIH\\145_v2\\.git"
+    ],
+    "forbidden_entries_found": [],
+    "reparse_points_count": 0,
+    "reparse_points": [],
+    "cycle_detected": false,
+    "violations": []
+  },
+  "network_write_audit": {
+    "total_matches_found": 12,
+    "runtime_network_writes": 0,
+    "matches": [
+      {
+        "file": "pipeline/passive_guard.py",
+        "line": 81,
+        "op_type": "socket_write",
+        "code": "orig_send = socket.socket.send",
+        "classification": "A_OFFLINE_TESTERS_ONLY"
+      },
+      {
+        "file": "pipeline/passive_guard.py",
+        "line": 82,
+        "op_type": "socket_write",
+        "code": "orig_sendto = socket.socket.sendto",
+        "classification": "A_OFFLINE_TESTERS_ONLY"
+      },
+      {
+        "file": "pipeline/passive_guard.py",
+        "line": 83,
+        "op_type": "socket_write",
+        "code": "orig_sendall = socket.socket.sendall",
+        "classification": "A_OFFLINE_TESTERS_ONLY"
+      },
+      {
+        "file": "pipeline/passive_guard.py",
+        "line": 84,
+        "op_type": "socket_write",
+        "code": "orig_connect = socket.socket.connect",
+        "classification": "A_OFFLINE_TESTERS_ONLY"
+      },
+      {
+        "file": "pipeline/passive_guard.py",
+        "line": 104,
+        "op_type": "socket_write",
+        "code": "socket.socket.send = safe_send",
+        "classification": "A_OFFLINE_TESTERS_ONLY"
+      },
+      {
+        "file": "pipeline/passive_guard.py",
+        "line": 105,
+        "op_type": "socket_write",
+        "code": "socket.socket.sendto = safe_sendto",
+        "classification": "A_OFFLINE_TESTERS_ONLY"
+      },
+      {
+        "file": "pipeline/passive_guard.py",
+        "line": 106,
+        "op_type": "socket_write",
+        "code": "socket.socket.sendall = safe_sendall",
+        "classification": "A_OFFLINE_TESTERS_ONLY"
+      },
+      {
+        "file": "pipeline/passive_guard.py",
+        "line": 107,
+        "op_type": "socket_write",
+        "code": "socket.socket.connect = safe_connect",
+        "classification": "A_OFFLINE_TESTERS_ONLY"
+      },
+      {
+        "file": "pipeline/passive_guard.py",
+        "line": 110,
+        "op_type": "socket_write",
+        "code": "socket.socket.send = orig_send",
+        "classification": "A_OFFLINE_TESTERS_ONLY"
+      },
+      {
+        "file": "pipeline/passive_guard.py",
+        "line": 111,
+        "op_type": "socket_write",
+        "code": "socket.socket.sendto = orig_sendto",
+        "classification": "A_OFFLINE_TESTERS_ONLY"
+      },
+      {
+        "file": "pipeline/passive_guard.py",
+        "line": 112,
+        "op_type": "socket_write",
+        "code": "socket.socket.sendall = orig_sendall",
+        "classification": "A_OFFLINE_TESTERS_ONLY"
+      },
+      {
+        "file": "pipeline/passive_guard.py",
+        "line": 113,
+        "op_type": "socket_write",
+        "code": "socket.socket.connect = orig_connect",
+        "classification": "A_OFFLINE_TESTERS_ONLY"
+      }
+    ],
+    "status": "PASS"
+  },
+  "tls_decryption_audit": {
+    "decryption_matches_found": 3,
+    "runtime_decryption_matches": 0,
+    "matches": [
+      {
+        "file": "evaluation/runners/m22_security_runner.py",
+        "line": 29,
+        "op_type": "payload_decryption",
+        "code": "2. **PAYLOAD DECRYPTION:** **{v['payload_decryption']}**",
+        "classification": "A_OFFLINE_TESTERS_ONLY"
+      },
+      {
+        "file": "evaluation/runners/m22_security_runner.py",
+        "line": 59,
+        "op_type": "sslkeylog_export",
+        "code": "- **SSLKEYLOG Export:** NONE",
+        "classification": "A_OFFLINE_TESTERS_ONLY"
+      },
+      {
+        "file": "tests/test_m22_security_boundary.py",
+        "line": 42,
+        "op_type": "payload_decryption",
+        "code": "def test_no_tls_payload_decryption_metadata_only():",
+        "classification": "A_OFFLINE_TESTERS_ONLY"
+      }
+    ],
+    "metadata_only_verified": true,
+    "status": "PASS"
+  },
+  "active_response_audit": {
+    "active_response_matches_found": 0,
+    "runtime_response_matches": 0,
+    "matches": [],
+    "active_response_disabled": true,
+    "status": "PASS"
+  },
+  "api_surface_audit": {
+    "api_files_audited": 2,
+    "endpoints_found": 11,
+    "actuation_endpoints": 0,
+    "status": "PASS"
+  },
+  "passive_ingest_audit": {
+    "pcap_reader_present": true,
+    "replay_present": true,
+    "read_source": "PCAP File / Packet Buffer",
+    "write_source": "None",
+    "one_way_passive_model": true,
+    "status": "PASS"
+  },
+  "verdict": {
+    "network_writes_in_detection_runtime": "0 / NONE",
+    "payload_decryption": "NONE",
+    "active_response": "DISABLED / NONE",
+    "passive_ingest": "YES",
+    "one_way_model": "YES",
+    "security_boundary_verdict": "PASS"
+  }
+}
