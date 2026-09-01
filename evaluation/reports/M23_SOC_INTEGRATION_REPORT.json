@@ -1,14 +1,14 @@
 {
   "milestone": "M23",
   "title": "Final SOC / Analyst Dashboard Integration",
-  "timestamp_iso": "2026-09-01T13:22:17.636925+00:00",
+  "timestamp_iso": "2026-09-01T16:06:27.384000+00:00",
   "compliance_enclave": "PS 26145",
   "tests": {
     "static_ui_assets": {
       "status": "PASS",
-      "index_bytes": 14145,
-      "css_bytes": 19214,
-      "js_bytes": 24601
+      "index_bytes": 28697,
+      "css_bytes": 35496,
+      "js_bytes": 43302
     },
     "system_health_and_metrics": {
       "status": "PASS",

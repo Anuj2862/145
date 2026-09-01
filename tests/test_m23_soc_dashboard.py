@@ -1,15 +1,15 @@
-"""
-Milestone 23 & 23.1 (M23/M23.1) Tests ? Final SOC / Analyst Dashboard Integration
-Validates:
-1. Dashboard static routes and asset serving.
-2. Read-only SOC API endpoints (/health, /metrics, /security-boundary, /provenance, /alerts, /incidents, /entities, /graph).
-3. Zero active mitigation/response endpoints (Enclave out-of-band guarantee).
-4. Distinct risk metric separation (Fused Risk vs ML Probability vs Confidence vs Severity).
-5. Deterministic in-memory multi-stage attack replay (/demo/replay).
-6. Missing metadata graceful string representations ("no DNS metadata", etc.).
-7. Canonical version & provenance consistency across API, models, and schemas (M23.1).
-8. Dashboard dynamic data-provenance binding (M23.1).
-"""
+# Milestone 23, 23.1, 23.2 & 23.3 (M23/M23.1/M23.2/M23.3) Tests ? SOC Dashboard & Entity Attack Graph Upgrade
+# Validates:
+# 1. Dashboard static routes and asset serving (index.html, style.css, app.js).
+# 2. Read-only SOC API endpoints (/health, /metrics, /security-boundary, /provenance, /alerts, /incidents, /entities, /graph).
+# 3. Zero active mitigation/response endpoints (Enclave out-of-band guarantee).
+# 4. Distinct risk metric separation (Fused Risk vs ML Probability vs Confidence vs Severity).
+# 5. Deterministic in-memory multi-stage attack replay (/demo/replay).
+# 6. Missing metadata graceful string representations ("no DNS metadata", etc.).
+# 7. Canonical version & provenance consistency across API, models, and schemas (M23.1).
+# 8. Dashboard dynamic data-provenance binding & absence of stale literals (M23.1).
+# 9. Redesigned SOC Layout, Sidebar, Incident Drawer, Evidence Table & Timeline bindings (M23.2).
+# 10. Hero Attack Graph Data, Typed Nodes, Semantic Edges, Timeline Scrubbing & Risk Progression (M23.3).
 
 from __future__ import annotations
 import json
@@ -37,15 +37,22 @@ def test_dashboard_routes_and_static_files(client):
     """Test dashboard index and static assets."""
     r_index = client.get("/")
     assert r_index.status_code == 200
-    assert "UNIGUARD AI" in r_index.text
+    assert "UNIGUARD" in r_index.text
+    assert "incident-drawer" in r_index.text
+    assert "soc-sidebar" in r_index.text
+    assert "d3GraphContainer" in r_index.text
 
     r_css = client.get("/static/style.css")
     assert r_css.status_code == 200
-    assert "cyber-soc-theme" in r_css.text
+    assert "incident-drawer" in r_css.text
+    assert "kpi-strip" in r_css.text
+    assert "graph-timeline-scrub-bar" in r_css.text
 
     r_js = client.get("/static/app.js")
     assert r_js.status_code == 200
-    assert "renderIncidentDossier" in r_js.text
+    assert "openIncidentDrawer" in r_js.text
+    assert "renderD3TopologyGraph" in r_js.text
+    assert "inspectGraphNode" in r_js.text
 
 def test_health_and_metrics_endpoints(client):
     """Test system health and performance metrics instrumentation."""
@@ -229,11 +236,64 @@ def test_dashboard_dynamic_provenance_binding(client):
     assert r_js.status_code == 200
     js_text = r_js.text
 
-    # Verify absence of stale literals in JS source
     assert "v2.0 (18 features)" not in js_text
     assert "v2-calibrated-2026" not in js_text
     assert "v2-unsupervised-iso" not in js_text
-
-    # Verify presence of dynamic binding
     assert "runtimeProvenance" in js_text
     assert "/provenance" in js_text
+
+def test_m23_2_ux_redesign_components(client):
+    """M23.2: Verify the redesigned UX components (Sidebar, Drawer, KPI strip, Demo isolation)."""
+    r_index = client.get("/")
+    assert r_index.status_code == 200
+    html = r_index.text
+
+    assert 'id="nav-feed"' in html
+    assert 'id="nav-incidents"' in html
+    assert 'id="nav-forensics"' in html
+    assert 'id="nav-security"' in html
+    assert 'id="nav-demo"' in html
+
+    assert 'class="kpi-strip"' in html
+    assert 'id="kpiIncidents"' in html
+    assert 'id="kpiThroughput"' in html
+
+    assert 'id="incidentDrawer"' in html
+    assert 'id="drawerOverlay"' in html
+    assert 'id="drawerBody"' in html
+
+    assert 'id="tab-demo"' in html
+    assert 'LOCAL DEMO CONTROL ONLY' in html
+
+    r_css = client.get("/static/style.css")
+    assert r_css.status_code == 200
+    css = r_css.text
+    assert "--kpi-height: 74px" in css
+    assert ".incident-drawer" in css
+
+def test_m23_3_attack_graph_and_semantic_edges(client):
+    """M23.3: Verify Hero Attack Graph structure, node types, semantic edge labels, and timeline controls."""
+    # Trigger demo replay to seed graph with all 5 attack stages
+    r_replay = client.post("/demo/replay")
+    assert r_replay.status_code == 200
+
+    r_graph = client.get("/graph")
+    assert r_graph.status_code == 200
+    g = r_graph.json()
+    assert "nodes" in g
+    assert "links" in g
+    assert len(g["nodes"]) >= 5
+    assert len(g["links"]) >= 4
+
+    node_types = set(n["type"] for n in g["nodes"])
+    assert "HOST_IP" in node_types
+    assert "THREAT_STAGE" in node_types
+
+    edge_semantics = set(e.get("properties", {}).get("semantic", e.get("type")) for e in g["links"])
+    assert any(sem in edge_semantics for sem in ["contacted", "queried", "correlated", "followed_by"])
+
+    # Verify frontend index contains timeline scrubber and trajectory strip
+    r_index = client.get("/")
+    assert 'id="timelineScrubRange"' in r_index.text
+    assert 'id="riskTrajectoryStrip"' in r_index.text
+    assert 'id="btnToggleLabels"' in r_index.text

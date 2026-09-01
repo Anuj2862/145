@@ -2,7 +2,7 @@
 
 **Milestone:** M23
 **Title:** Final SOC / Analyst Dashboard Integration
-**Evaluation Timestamp:** `2026-09-01T13:22:17.636925+00:00`
+**Evaluation Timestamp:** `2026-09-01T16:06:27.384000+00:00`
 **Enclave Compliance:** `PS 26145`
 **Overall Verdict:** **PASS (6/6 test groups passed)**
 
@@ -17,7 +17,7 @@ The M23 SOC / Analyst Dashboard Integration brings together the entire UniGuard 
 
 | Test Domain | Component / Requirement | Result | Key Indicators |
 | :--- | :--- | :---: | :--- |
-| **Static UI Assets** | HTML5 / CSS3 / D3.js Assets | `PASS` | Index: 14145 B, CSS: 19214 B, JS: 24601 B |
+| **Static UI Assets** | HTML5 / CSS3 / D3.js Assets | `PASS` | Index: 28697 B, CSS: 35496 B, JS: 43302 B |
 | **System Telemetry & Metrics** | `/health` & `/metrics` Endpoints | `PASS` | P95 Latency: 2.85 ms, Queue: 0, Drops: 0 |
 | **Enclave Security Boundary** | `/security-boundary` & Read-Only Guarantee | `PASS` | Passive Ingest: YES, Writes: 0, Active Response: DISABLED, Decryption: NONE |
 | **Incident Dossier & Risk** | Distinct Risk, ML Prob, Conf, Severity | `PASS` | Incidents: 3, Risk Separation: Strict |

@@ -148,7 +148,7 @@
       },
       {
         "file": "tests/test_m23_soc_dashboard.py",
-        "line": 83,
+        "line": 90,
         "op_type": "payload_decryption",
         "code": "assert sec_data[\"payload_decryption\"] == \"NONE\"",
         "classification": "A_OFFLINE_TESTERS_ONLY"

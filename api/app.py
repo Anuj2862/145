@@ -348,6 +348,16 @@ def simulate_specific_attack(req: AttackSimulationRequest) -> Dict[str, Any]:
     pipeline.entity_memory.record_signal(sig)
     group, risk, c_sev = pipeline.fusion_engine.process_signal(sig, pipeline.entity_memory, pipeline.entity_graph)
 
+    # Populate entity graph with semantic edges and typed nodes
+    pipeline.entity_graph.add_node(src, NodeType.HOST_IP, {"role": "Monitored Enclave Host", "status": "ACTIVE", "last_risk": risk})
+    dst_type = NodeType.DOMAIN if (".net" in dst or ".org" in dst or ".cc" in dst or ".to" in dst) else NodeType.EXTERNAL_IP
+    pipeline.entity_graph.add_node(dst, dst_type, {"role": "Observed Destination Node", "threat": tc.value})
+    pipeline.entity_graph.add_edge(src, dst, EdgeType.COMMUNICATES_WITH, properties={"semantic": "contacted", "threat": tc.value, "risk": risk})
+
+    stage_id = f"STAGE-{tc.value}"
+    pipeline.entity_graph.add_node(stage_id, "THREAT_STAGE", {"stage_name": tc.value, "severity": sev.value, "risk": risk, "confidence": conf})
+    pipeline.entity_graph.add_edge(src, stage_id, "CORRELATED_STAGE", properties={"semantic": "correlated", "event_time": now_ts})
+
     inc_id = f"INC-{datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')}-{random.randint(1000, 9999)}"
 
     # Construct canonical rich Incident

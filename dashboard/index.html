@@ -3,313 +3,577 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>UniGuard AI ? Operational SOC Command Center (PS 26145)</title>
+  <title>UniGuard AI ? Tactical SOC Analyst Command Center (PS 26145)</title>
   <link rel="stylesheet" href="/static/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
   <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
-<body class="cyber-soc-theme">
-  <!-- Top Navigation / Enclave Security Header -->
-  <header class="soc-header">
-    <div class="header-left">
-      <div class="brand-badge">
-        <span class="brand-glitch" data-text="UNIGUARD AI">UNIGUARD AI</span>
-        <span class="brand-sub">TACTICAL SOC COMMAND</span>
-      </div>
-      <div class="enclave-tag">
-        <span class="pulse-indicator"></span>
-        <span class="enclave-text">PS 26145 ENCLAVE: ONE-WAY PASSIVE DIODE</span>
-      </div>
-    </div>
+<body class="soc-body">
+  <!-- Application Container with Left Navigation Sidebar -->
+  <div class="soc-app-layout">
 
-    <div class="header-center">
-      <div class="soc-tabs">
-        <button class="tab-btn active" onclick="switchTab('tab-feed')">
-          <span class="tab-icon">&#9888;</span> DETECTION FEED
+    <!-- LEFT SIDEBAR -->
+    <aside class="soc-sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-shield">&#128737;</div>
+        <div class="brand-names">
+          <span class="brand-title">UNIGUARD AI</span>
+          <span class="brand-badge">SOC 2.1</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">MONITORING &amp; INTELLIGENCE</div>
+        <button class="nav-item active" id="nav-feed" onclick="switchNavTab('tab-feed')">
+          <span class="nav-icon">&#9888;</span>
+          <span class="nav-label">Detection Feed</span>
+          <span class="nav-pill" id="navAlertCount">0</span>
         </button>
-        <button class="tab-btn" onclick="switchTab('tab-incident')">
-          <span class="tab-icon">&#128065;</span> INCIDENTS &amp; ATTACK CHAIN
+        <button class="nav-item" id="nav-forensics" onclick="switchNavTab('tab-forensics')">
+          <span class="nav-icon">&#128396;</span>
+          <span class="nav-label">Attack Graph</span>
+          <span class="nav-status-badge badge-cyan">HERO</span>
         </button>
-        <button class="tab-btn" onclick="switchTab('tab-forensics')">
-          <span class="tab-icon">&#128396;</span> FORENSICS &amp; TOPOLOGY
+        <button class="nav-item" id="nav-incidents" onclick="switchNavTab('tab-incidents')">
+          <span class="nav-icon">&#128065;</span>
+          <span class="nav-label">Incidents</span>
+          <span class="nav-pill pill-red" id="navIncCount">0</span>
         </button>
-        <button class="tab-btn" onclick="switchTab('tab-security')">
-          <span class="tab-icon">&#128737;</span> HEALTH &amp; BOUNDARIES
+
+        <div class="nav-section-title">ENCLAVE ASSURANCE</div>
+        <button class="nav-item" id="nav-security" onclick="switchNavTab('tab-security')">
+          <span class="nav-icon">&#128737;</span>
+          <span class="nav-label">Security Boundary</span>
+          <span class="nav-status-badge">PASS</span>
+        </button>
+        <button class="nav-item" id="nav-demo" onclick="switchNavTab('tab-demo')">
+          <span class="nav-icon">&#9881;</span>
+          <span class="nav-label">Demo Simulation</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="diode-status-box">
+          <span class="diode-dot"></span>
+          <div class="diode-info">
+            <div class="diode-title">DIODE RX: ACTIVE</div>
+            <div class="diode-sub">0 Network Writes &bull; Out-of-Band</div>
+          </div>
+        </div>
+        <button class="btn-audio-toggle" id="btnAudioToggle" onclick="toggleAudio()" title="Toggle Tactical Audio Alerts">
+          &#128266; SOUND ON
         </button>
       </div>
-    </div>
+    </aside>
 
-    <div class="header-right">
-      <button class="btn-audio" id="btnAudioToggle" onclick="toggleAudio()">
-        &#128266; SOUND ON
-      </button>
-      <div class="live-clock" id="socClock">00:00:00 UTC</div>
-    </div>
-  </header>
+    <!-- MAIN VIEWPORT -->
+    <div class="soc-viewport">
 
-  <!-- KPI Summary Ribbon -->
-  <section class="kpi-ribbon">
-    <div class="kpi-card">
-      <div class="kpi-title">ACTIVE INCIDENTS</div>
-      <div class="kpi-value text-red" id="kpiIncidents">--</div>
-      <div class="kpi-sub">Multi-Signal Fused</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-title">DETECTION ALERTS</div>
-      <div class="kpi-value text-orange" id="kpiAlerts">--</div>
-      <div class="kpi-sub">Real-Time Ingest</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-title">MONITORED ENTITIES</div>
-      <div class="kpi-value text-cyan" id="kpiEntities">--</div>
-      <div class="kpi-sub">Host / IP Profiles</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-title">STREAMING INGEST</div>
-      <div class="kpi-value text-green" id="kpiThroughput">-- pps</div>
-      <div class="kpi-sub">Passive Optical RX</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-title">P95 PROCESSING LATENCY</div>
-      <div class="kpi-value text-purple" id="kpiLatency">-- ms</div>
-      <div class="kpi-sub">Zero-Buffer Engine</div>
-    </div>
-  </section>
-
-  <!-- Simulation Control Strip -->
-  <section class="sim-control-strip">
-    <div class="sim-strip-label">
-      <span class="sim-indicator"></span>
-      <span>ATTACK SIMULATION &amp; REPLAY ENGINE (IN-MEMORY ENCLAVE)</span>
-    </div>
-    <div class="sim-strip-actions">
-      <button class="sim-btn ddos" onclick="injectAttack('VOLUMETRIC_DDOS')">+ SYN Flood DDoS</button>
-      <button class="sim-btn c2" onclick="injectAttack('BOTNET_C2_BEACONING')">+ C2 Beaconing</button>
-      <button class="sim-btn dns" onclick="injectAttack('DGA_DNS_TUNNELLING')">+ DGA DNS Tunnel</button>
-      <button class="sim-btn malware" onclick="injectAttack('ENCRYPTED_MALWARE')">+ Encrypted Malware</button>
-      <button class="sim-btn recon" onclick="injectAttack('RECON_PORT_SCAN')">+ Port Recon Scan</button>
-      <button class="sim-btn exfil" onclick="injectAttack('DATA_EXFILTRATION')">+ Data Exfiltration</button>
-      <button class="sim-btn replay-demo" onclick="runDeterministicDemo()">&#9654; 5-STAGE REPLAY</button>
-      <button class="sim-btn toggle-sim" id="btnSimToggle" onclick="toggleLiveSimulation()">&#9881; LIVE SIM: OFF</button>
-    </div>
-  </section>
-
-  <!-- Main Multi-Tab View Content -->
-  <main class="soc-main-content">
-
-    <!-- TAB 1: Real-Time Detection Feed -->
-    <div id="tab-feed" class="tab-content active">
-      <div class="panel-card">
-        <div class="panel-header">
-          <div class="panel-title-group">
-            <h2>Real-Time Detection &amp; Alert Telemetry</h2>
-            <span class="badge-count" id="alertTableCount">0 Detections</span>
-          </div>
-          <div class="panel-actions">
-            <input type="text" id="searchFilter" placeholder="Filter entity IP, threat class, ID..." class="cyber-input" onkeyup="applyTableFilters()">
-            <select id="severityFilter" class="cyber-select" onchange="applyTableFilters()">
-              <option value="ALL">All Severities</option>
-              <option value="CRITICAL">Critical Only</option>
-              <option value="HIGH">High Only</option>
-              <option value="MEDIUM">Medium Only</option>
-              <option value="LOW">Low Only</option>
-            </select>
-            <select id="threatFilter" class="cyber-select" onchange="applyTableFilters()">
-              <option value="ALL">All Threat Classes</option>
-              <option value="VOLUMETRIC_DDOS">Volumetric DDoS</option>
-              <option value="BOTNET_C2_BEACONING">Botnet C2 Beaconing</option>
-              <option value="DGA_DNS_TUNNELLING">DGA DNS Tunnelling</option>
-              <option value="ENCRYPTED_MALWARE">Encrypted Malware</option>
-              <option value="RECON_PORT_SCAN">Recon Port Scan</option>
-              <option value="DATA_EXFILTRATION">Data Exfiltration</option>
-              <option value="UNKNOWN_ANOMALY">Unknown Anomaly</option>
-            </select>
-            <button class="btn-action" id="btnSortOrder" onclick="toggleSortOrder()">&#9650; EVENT TIME (NEWEST)</button>
+      <!-- TOP HEADER -->
+      <header class="soc-topbar">
+        <div class="topbar-left">
+          <h1 class="topbar-title">OPERATIONAL THREAT INTELLIGENCE COMMAND</h1>
+          <div class="topbar-enclave-tag">
+            <span class="enclave-tag-badge">PS 26145 ENCLAVE</span>
+            <span class="enclave-mode-text">One-Way Passive Optical Ingest &bull; Read-Only</span>
           </div>
         </div>
 
-        <div class="table-scroll-container">
-          <table class="cyber-table" id="detectionsTable">
-            <thead>
-              <tr>
-                <th>Event Time</th>
-                <th>Source Entity</th>
-                <th>Destination / Target</th>
-                <th>Threat Classification</th>
-                <th>Severity</th>
-                <th>Fused Risk</th>
-                <th>Confidence</th>
-                <th>Forensics Action</th>
-              </tr>
-            </thead>
-            <tbody id="detectionsTableBody">
-              <!-- Populated dynamically via JS -->
-            </tbody>
-          </table>
+        <div class="topbar-right">
+          <div class="provenance-strip">
+            <div class="prov-tag" title="Feature Contract Version">
+              <span class="prov-lbl">SCHEMA:</span>
+              <strong id="topbarSchemaVer">feature-schema-v2.1.0</strong>
+            </div>
+            <div class="prov-tag" title="Primary Classifier Model">
+              <span class="prov-lbl">MODEL:</span>
+              <strong id="topbarModelVer">v2.1.0-calibrated-lgb</strong>
+            </div>
+          </div>
+          <div class="topbar-clock" id="topbarClock">00:00:00 UTC</div>
         </div>
+      </header>
+
+      <!-- COMPACT KPI ROW (74px Height) -->
+      <section class="kpi-strip">
+        <div class="kpi-box">
+          <div class="kpi-meta">
+            <span class="kpi-lbl">ACTIVE INCIDENTS</span>
+            <span class="kpi-trend trend-red">&#9650; Multi-Signal</span>
+          </div>
+          <div class="kpi-main">
+            <span class="kpi-num text-red" id="kpiIncidents">--</span>
+            <span class="kpi-sub-text">Fused Dossiers</span>
+          </div>
+        </div>
+
+        <div class="kpi-box">
+          <div class="kpi-meta">
+            <span class="kpi-lbl">CRITICAL SEVERITY</span>
+            <span class="kpi-trend trend-orange">Priority 1</span>
+          </div>
+          <div class="kpi-main">
+            <span class="kpi-num text-orange" id="kpiCritical">--</span>
+            <span class="kpi-sub-text">Action Required</span>
+          </div>
+        </div>
+
+        <div class="kpi-box">
+          <div class="kpi-meta">
+            <span class="kpi-lbl">MONITORED ENTITIES</span>
+            <span class="kpi-trend trend-cyan">Active Hosts</span>
+          </div>
+          <div class="kpi-main">
+            <span class="kpi-num text-cyan" id="kpiEntities">--</span>
+            <span class="kpi-sub-text">Behavioral Baselines</span>
+          </div>
+        </div>
+
+        <div class="kpi-box">
+          <div class="kpi-meta">
+            <span class="kpi-lbl">STREAMING INGEST</span>
+            <span class="kpi-trend trend-green">Passive RX</span>
+          </div>
+          <div class="kpi-main">
+            <span class="kpi-num text-green" id="kpiThroughput">-- pps</span>
+            <span class="kpi-sub-text" id="kpiFps">-- fps</span>
+          </div>
+        </div>
+
+        <div class="kpi-box">
+          <div class="kpi-meta">
+            <span class="kpi-lbl">P95 PIPELINE LATENCY</span>
+            <span class="kpi-trend trend-purple">Zero-Buffer</span>
+          </div>
+          <div class="kpi-main">
+            <span class="kpi-num text-purple" id="kpiLatency">2.85 ms</span>
+            <span class="kpi-sub-text">P50: 1.12 ms</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- DYNAMIC CONTENT TABS -->
+      <main class="soc-content-area">
+
+        <!-- =================================================================== -->
+        <!-- TAB 1: PRIMARY ANALYST VIEW (LIVE DETECTION FEED + HEALTH & BOUNDARY) -->
+        <!-- =================================================================== -->
+        <div id="tab-feed" class="view-tab active">
+          <div class="analyst-dashboard-grid">
+
+            <!-- LEFT / LARGE: LIVE DETECTION FEED (PRIMARY COMPONENT) -->
+            <section class="card-panel feed-panel">
+              <div class="panel-header-compact">
+                <div class="header-title-group">
+                  <h2>Real-Time Threat Detection Telemetry</h2>
+                  <span class="count-tag" id="feedCountBadge">0 Detections</span>
+                </div>
+                <div class="header-controls">
+                  <div class="search-wrap">
+                    <input type="text" id="searchFilter" placeholder="Filter IP, threat class, ID..." class="input-filter" onkeyup="applyTableFilters()">
+                  </div>
+                  <select id="severityFilter" class="select-filter" onchange="applyTableFilters()">
+                    <option value="ALL">All Severities</option>
+                    <option value="CRITICAL">Critical</option>
+                    <option value="HIGH">High</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="LOW">Low</option>
+                  </select>
+                  <select id="threatFilter" class="select-filter" onchange="applyTableFilters()">
+                    <option value="ALL">All Threat Classes</option>
+                    <option value="VOLUMETRIC_DDOS">Volumetric DDoS</option>
+                    <option value="BOTNET_C2_BEACONING">Botnet C2 Beaconing</option>
+                    <option value="DGA_DNS_TUNNELLING">DGA DNS Tunnelling</option>
+                    <option value="ENCRYPTED_MALWARE">Encrypted Malware</option>
+                    <option value="RECON_PORT_SCAN">Recon Port Scan</option>
+                    <option value="DATA_EXFILTRATION">Data Exfiltration</option>
+                    <option value="UNKNOWN_ANOMALY">Unknown Anomaly</option>
+                  </select>
+                  <button class="btn-sort" id="btnSortOrder" onclick="toggleSortOrder()" title="Toggle Chronological Order">
+                    &#9650; TIME (NEWEST)
+                  </button>
+                </div>
+              </div>
+
+              <!-- HIGH-DENSITY DETECTION TABLE -->
+              <div class="table-container">
+                <table class="soc-table" id="detectionsTable">
+                  <thead>
+                    <tr>
+                      <th style="width: 140px;">Event Time (UTC)</th>
+                      <th style="width: 130px;">Entity Host</th>
+                      <th style="width: 140px;">Observed Target</th>
+                      <th>Threat Classification</th>
+                      <th style="width: 90px;">Severity</th>
+                      <th style="width: 130px;">Fused Risk</th>
+                      <th style="width: 80px;">Conf</th>
+                      <th style="width: 90px; text-align: center;">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="detectionsTableBody">
+                    <!-- Populated dynamically via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <!-- RIGHT COLUMN: COMPACT SYSTEM HEALTH & SECURITY BOUNDARY PANELS -->
+            <aside class="feed-right-column">
+
+              <!-- COMPACT SYSTEM HEALTH PANEL -->
+              <section class="card-panel health-panel-compact">
+                <div class="panel-header-mini">
+                  <h3>&#9881; System Telemetry</h3>
+                  <span class="status-chip chip-green">HEALTHY</span>
+                </div>
+                <div class="health-grid-mini">
+                  <div class="health-cell">
+                    <span class="h-lbl">Packets/sec</span>
+                    <span class="h-val text-green" id="miniPps">--</span>
+                  </div>
+                  <div class="health-cell">
+                    <span class="h-lbl">Flows/sec</span>
+                    <span class="h-val text-cyan" id="miniFps">--</span>
+                  </div>
+                  <div class="health-cell">
+                    <span class="h-lbl">Queue Depth</span>
+                    <span class="h-val" id="miniQueue">0</span>
+                  </div>
+                  <div class="health-cell">
+                    <span class="h-lbl">Dropped Events</span>
+                    <span class="h-val text-green" id="miniDropped">0</span>
+                  </div>
+                  <div class="health-cell">
+                    <span class="h-lbl">Memory Footprint</span>
+                    <span class="h-val" id="miniMem">186.4 MB</span>
+                  </div>
+                  <div class="health-cell">
+                    <span class="h-lbl">CPU Load</span>
+                    <span class="h-val" id="miniCpu">4.2%</span>
+                  </div>
+                </div>
+              </section>
+
+              <!-- COMPACT SECURITY BOUNDARY PANEL -->
+              <section class="card-panel security-panel-compact">
+                <div class="panel-header-mini">
+                  <h3>&#128737; Security Boundary</h3>
+                  <span class="status-chip chip-green" id="secBadgeMini">PASS</span>
+                </div>
+                <div class="boundary-list-mini">
+                  <div class="b-row">
+                    <span class="b-name">Passive Optical Ingest</span>
+                    <span class="b-val text-green">PASS</span>
+                  </div>
+                  <div class="b-row">
+                    <span class="b-name">Runtime Network Writes</span>
+                    <span class="b-val text-green">0</span>
+                  </div>
+                  <div class="b-row">
+                    <span class="b-name">Active Response / Mitigation</span>
+                    <span class="b-val text-orange">DISABLED</span>
+                  </div>
+                  <div class="b-row">
+                    <span class="b-name">Payload Decryption</span>
+                    <span class="b-val text-green">NONE</span>
+                  </div>
+                  <div class="b-row">
+                    <span class="b-name">Workspace Integrity</span>
+                    <span class="b-val text-green">PASS</span>
+                  </div>
+                </div>
+                <div class="boundary-quote-mini">
+                  &ldquo;Detection is out-of-band and read-only.&rdquo;
+                </div>
+              </section>
+
+              <!-- QUICK DEMO LAUNCHER MINI-BOX -->
+              <section class="card-panel demo-launcher-mini">
+                <div class="panel-header-mini">
+                  <h3>&#9654; Attack Scenario Replay</h3>
+                  <span class="status-chip chip-blue">DEMO</span>
+                </div>
+                <p class="mini-desc">Deterministic 5-stage attack chain in-memory replay.</p>
+                <button class="btn-replay-action" onclick="runDeterministicDemo()">
+                  &#9654; 5-STAGE REPLAY
+                </button>
+              </section>
+
+            </aside>
+          </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- TAB 2: HERO VISUALIZATION ? ENTITY ATTACK GRAPH (M23.3 UPGRADE) -->
+        <!-- =================================================================== -->
+        <div id="tab-forensics" class="view-tab">
+          <div class="forensics-full-layout">
+
+            <!-- HERO GRAPH CONTAINER -->
+            <div class="card-panel graph-panel-full">
+              <div class="panel-header-compact graph-toolbar">
+                <div class="header-title-group">
+                  <h2>Entity-Centric Attack Graph &amp; Multi-Signal Correlator</h2>
+                  <span class="count-tag" id="graphStatsTag">D3 Force-Directed</span>
+                </div>
+
+                <!-- COMPACT GRAPH CONTROLS (ZOOM, FIT, RESET, LABELS, FILTERS) -->
+                <div class="graph-control-strip">
+                  <button class="btn-graph-tool" onclick="zoomGraph(1.2)" title="Zoom In">+</button>
+                  <button class="btn-graph-tool" onclick="zoomGraph(0.8)" title="Zoom Out">&minus;</button>
+                  <button class="btn-graph-tool" onclick="resetGraphView()" title="Fit &amp; Center Graph">&#x26F6; Fit</button>
+                  <button class="btn-graph-tool" id="btnToggleLabels" onclick="toggleGraphLabels()" title="Toggle Node Labels">&#127991; Labels</button>
+
+                  <div class="graph-filter-pills">
+                    <button class="pill-btn active" id="flt-HOST" onclick="toggleNodeFilter('HOST_IP')">Hosts</button>
+                    <button class="pill-btn active" id="flt-STAGE" onclick="toggleNodeFilter('THREAT_STAGE')">Stages</button>
+                    <button class="pill-btn active" id="flt-EXT" onclick="toggleNodeFilter('EXTERNAL_IP')">Targets</button>
+                    <button class="pill-btn active" id="flt-DOM" onclick="toggleNodeFilter('DOMAIN')">Domains</button>
+                    <button class="pill-btn active" id="flt-TLS" onclick="toggleNodeFilter('TLS_FINGERPRINT')">TLS</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- D3 CANVAS -->
+              <div class="d3-canvas" id="d3GraphContainer"></div>
+
+              <!-- TIMELINE SCRUBBER SLIDER -->
+              <div class="graph-timeline-scrub-bar">
+                <div class="scrub-meta">
+                  <span class="scrub-title">&#128337; Event-Time Stage Progression</span>
+                  <span class="scrub-time-label" id="timelineScrubTime">All Stages Visible</span>
+                </div>
+                <div class="scrub-controls-row">
+                  <input type="range" min="0" max="5" value="5" class="scrub-slider" id="timelineScrubRange" oninput="handleTimelineScrub(this.value)">
+                  <div class="scrub-ticks">
+                    <span>Init</span>
+                    <span>Recon</span>
+                    <span>C2 Beacon</span>
+                    <span>DNS Tunnel</span>
+                    <span>Malware</span>
+                    <span>Exfiltration</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- RISK PROGRESSION TRAJECTORY STRIP -->
+              <div class="risk-trajectory-strip" id="riskTrajectoryStrip">
+                <span class="traj-lbl">Observed Fused Risk Progression:</span>
+                <div class="traj-values" id="trajValuesContainer">
+                  <span class="traj-step">0.31</span>
+                  <span class="traj-arrow">&rarr;</span>
+                  <span class="traj-step">0.44</span>
+                  <span class="traj-arrow">&rarr;</span>
+                  <span class="traj-step">0.62</span>
+                  <span class="traj-arrow">&rarr;</span>
+                  <span class="traj-step">0.81</span>
+                  <span class="traj-arrow">&rarr;</span>
+                  <span class="traj-step high">0.99 (CRITICAL)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- INTERACTIVE RIGHT NODE / EVIDENCE INSPECTOR -->
+            <aside class="card-panel entity-side-inspector">
+              <div class="panel-header-compact">
+                <h3 id="inspectorHostTitle">Node &amp; Evidence Inspector</h3>
+                <span class="count-tag" id="inspectorNodeType">Click Node</span>
+              </div>
+              <div class="inspector-body" id="inspectorBody">
+                <div class="empty-msg">Click any Host, Threat Stage, Destination, Domain, or TLS node in the graph to inspect forensic attributes.</div>
+              </div>
+            </aside>
+          </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- TAB 3: INCIDENTS DOSSIER EXPLORER -->
+        <!-- =================================================================== -->
+        <div id="tab-incidents" class="view-tab">
+          <div class="incidents-full-layout">
+            <div class="inc-sidebar-list">
+              <div class="list-header">
+                <h3>Correlated Incidents</h3>
+                <button class="btn-icon-refresh" onclick="fetchAllData()">&#8635; Sync</button>
+              </div>
+              <div class="inc-list-items" id="incidentsListFull">
+                <!-- Populated via JS -->
+              </div>
+            </div>
+            <div class="inc-main-dossier" id="incMainDossier">
+              <div class="empty-dossier-state">
+                <div class="empty-icon">&#128065;</div>
+                <h3>Select an Incident to inspect full dossier</h3>
+                <p>Multi-stage attack chain, forensic evidence, and risk timeline will render here.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- TAB 4: ENCLAVE SECURITY & SYSTEM METRICS -->
+        <!-- =================================================================== -->
+        <div id="tab-security" class="view-tab">
+          <div class="security-full-layout">
+            <div class="card-panel">
+              <div class="panel-header-compact">
+                <h2>PS 26145 Enclave Security Boundary Guarantees</h2>
+                <span class="status-chip chip-green">PASS ? VERIFIED</span>
+              </div>
+              <div class="full-security-checklist">
+                <div class="sec-card-item">
+                  <div class="sec-card-icon ok">&#10004;</div>
+                  <div class="sec-card-text">
+                    <h4>Passive Ingest Only (Optical TAP / SPAN)</h4>
+                    <p>Network ingest operates strictly via receive-only physical optical tapping or SPAN port mirroring. Passive ingest status: <strong>YES</strong>.</p>
+                  </div>
+                </div>
+                <div class="sec-card-item">
+                  <div class="sec-card-icon ok">&#10004;</div>
+                  <div class="sec-card-text">
+                    <h4>Zero Network Writes in Detection Runtime</h4>
+                    <p>No packet transmission, TCP RST injection, port probing, or egress connections occur in detection runtime. Network writes: <strong>0</strong>.</p>
+                  </div>
+                </div>
+                <div class="sec-card-item">
+                  <div class="sec-card-icon ok">&#10004;</div>
+                  <div class="sec-card-text">
+                    <h4>Active Response / Mitigation: DISABLED</h4>
+                    <p>Zero automated firewall actuation or host isolation endpoints exist. All mitigation routes (/mitigate, /block, /drop) return 404. Active response: <strong>DISABLED</strong>.</p>
+                  </div>
+                </div>
+                <div class="sec-card-item">
+                  <div class="sec-card-icon ok">&#10004;</div>
+                  <div class="sec-card-text">
+                    <h4>Zero Payload Decryption</h4>
+                    <p>All analysis operates strictly on packet headers, timing statistics, and unencrypted handshake metadata (JA3/JA4/SNI/ALPN). Payload decryption: <strong>NONE</strong>.</p>
+                  </div>
+                </div>
+                <div class="sec-card-item">
+                  <div class="sec-card-icon ok">&#10004;</div>
+                  <div class="sec-card-text">
+                    <h4>Canonical Workspace &amp; Enclave Integrity</h4>
+                    <p>Canonical repository is preserved with zero nested copies, junction cycles, or recursive clones. Workspace integrity: <strong>PASS</strong>.</p>
+                  </div>
+                </div>
+              </div>
+              <div class="enclave-statement-banner">
+                &#9888; <strong>Mandatory Enclave Assertion:</strong> &ldquo;Detection is out-of-band and read-only.&rdquo;
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- TAB 5: DEMO SIMULATION ENGINE (LOCAL IN-MEMORY DEMO CONTROL) -->
+        <!-- =================================================================== -->
+        <div id="tab-demo" class="view-tab">
+          <div class="demo-full-layout">
+            <div class="card-panel demo-controls-panel">
+              <div class="panel-header-compact">
+                <div>
+                  <h2>Attack Scenario Simulation &amp; In-Memory Replay Engine</h2>
+                  <p class="demo-notice-tag">&#9888; LOCAL DEMO CONTROL ONLY &bull; ZERO PRODUCTION NETWORK TRANSMISSION</p>
+                </div>
+                <button class="btn-toggle-sim" id="btnSimToggle" onclick="toggleLiveSimulation()">
+                  &#9881; LIVE SIM: OFF
+                </button>
+              </div>
+
+              <div class="demo-actions-grid">
+                <div class="scenario-card">
+                  <div class="sc-header">
+                    <span class="sc-badge red">CRITICAL</span>
+                    <h4>Volumetric SYN Flood DDoS</h4>
+                  </div>
+                  <p>Injects 24,000 pps burst with 0.99 SYN ratio targeting internal edge service.</p>
+                  <button class="btn-inject" onclick="injectAttack('VOLUMETRIC_DDOS')">+ Inject SYN Flood</button>
+                </div>
+
+                <div class="scenario-card">
+                  <div class="sc-header">
+                    <span class="sc-badge orange">HIGH</span>
+                    <h4>Botnet C2 Beaconing</h4>
+                  </div>
+                  <p>Simulates periodic 60-second beaconing with 1.8% jitter to hidden command node.</p>
+                  <button class="btn-inject" onclick="injectAttack('BOTNET_C2_BEACONING')">+ Inject C2 Beacon</button>
+                </div>
+
+                <div class="scenario-card">
+                  <div class="sc-header">
+                    <span class="sc-badge orange">HIGH</span>
+                    <h4>DGA &amp; DNS Tunnelling</h4>
+                  </div>
+                  <p>Generates high-entropy pseudo-random subdomains (4.62 bits entropy) with TXT queries.</p>
+                  <button class="btn-inject" onclick="injectAttack('DGA_DNS_TUNNELLING')">+ Inject DNS Tunnel</button>
+                </div>
+
+                <div class="scenario-card">
+                  <div class="sc-header">
+                    <span class="sc-badge orange">HIGH</span>
+                    <h4>Encrypted Malware Session</h4>
+                  </div>
+                  <p>Simulates known malicious JA3 fingerprint with anomalous TLS packet timing deltas.</p>
+                  <button class="btn-inject" onclick="injectAttack('ENCRYPTED_MALWARE')">+ Inject TLS Malware</button>
+                </div>
+
+                <div class="scenario-card">
+                  <div class="sc-header">
+                    <span class="sc-badge yellow">MEDIUM</span>
+                    <h4>Horizontal Port Recon Scan</h4>
+                  </div>
+                  <p>Sweeps 2,048 destination ports at 850 pps to discover internal host services.</p>
+                  <button class="btn-inject" onclick="injectAttack('RECON_PORT_SCAN')">+ Inject Port Scan</button>
+                </div>
+
+                <div class="scenario-card">
+                  <div class="sc-header">
+                    <span class="sc-badge red">CRITICAL</span>
+                    <h4>Bulk Data Exfiltration</h4>
+                  </div>
+                  <p>Emits 128 MB outbound burst with 150:1 upload-to-download asymmetry ratio.</p>
+                  <button class="btn-inject" onclick="injectAttack('DATA_EXFILTRATION')">+ Inject Exfiltration</button>
+                </div>
+              </div>
+
+              <div class="deterministic-replay-hero">
+                <div class="hero-left">
+                  <h3>Deterministic 5-Stage Attack Chain Replay</h3>
+                  <p>Executes complete multi-stage progression: <strong>Recon Scan &rarr; C2 Beacon &rarr; DNS Tunnel &rarr; Encrypted Malware &rarr; Bulk Exfiltration</strong> in event-time chronological sequence.</p>
+                </div>
+                <button class="btn-hero-replay" onclick="runDeterministicDemo()">
+                  &#9654; EXECUTE 5-STAGE REPLAY
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- INCIDENT DETAIL SLIDE-OVER DRAWER (OPENS ON ROW CLICK) -->
+  <!-- =================================================================== -->
+  <div class="incident-drawer-overlay" id="drawerOverlay" onclick="closeIncidentDrawer()"></div>
+  <aside class="incident-drawer" id="incidentDrawer">
+    <div class="drawer-header">
+      <div class="drawer-title-group">
+        <span class="drawer-pretitle">INCIDENT INVESTIGATION DOSSIER</span>
+        <h2 id="drawerIncId">INC-XXXX</h2>
       </div>
+      <button class="btn-close-drawer" onclick="closeIncidentDrawer()" title="Close Drawer">&times;</button>
     </div>
 
-    <!-- TAB 2: Incident Investigation & Multi-Stage Attack Chain -->
-    <div id="tab-incident" class="tab-content">
-      <div class="incident-layout">
-        <!-- Sidebar: Incident List -->
-        <div class="incident-sidebar">
-          <div class="sidebar-header">
-            <h3>Active Incidents</h3>
-            <button class="btn-small" onclick="refreshIncidents()">&#8635; Refresh</button>
-          </div>
-          <div class="incident-list-container" id="incidentListItems">
-            <!-- Populated via JS -->
-          </div>
-        </div>
-
-        <!-- Incident Detailed Dossier Area -->
-        <div class="incident-dossier-area" id="incidentDetailContainer">
-          <div class="empty-state">
-            <div class="empty-icon">&#128065;</div>
-            <h3>Select an Incident from the sidebar to inspect dossier</h3>
-            <p>Full multi-signal timeline, correlated attack chain, and forensic indicators will render here.</p>
-          </div>
-        </div>
-      </div>
+    <div class="drawer-body" id="drawerBody">
+      <!-- Populated dynamically via JS -->
     </div>
+  </aside>
 
-    <!-- TAB 3: Forensics & Entity Topology Graph -->
-    <div id="tab-forensics" class="tab-content">
-      <div class="forensics-layout">
-        <div class="graph-card">
-          <div class="panel-header">
-            <h3>Entity Topology &amp; Attack Vector Graph</h3>
-            <span class="ps-badge">D3 FORCE-DIRECTED</span>
-          </div>
-          <div class="d3-graph-wrapper" id="d3GraphContainer">
-            <!-- D3 graph renders here -->
-          </div>
-        </div>
-
-        <div class="entity-inspector-card">
-          <div class="panel-header">
-            <h3>Entity Forensic Profile</h3>
-            <span class="entity-tag" id="selectedEntityId">Select Node</span>
-          </div>
-          <div class="entity-inspector-body" id="entityInspectorBody">
-            <div class="empty-msg">Click any host node in the topology graph to inspect behavioral baseline metrics.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB 4: System Health & Security Boundary -->
-    <div id="tab-security" class="tab-content">
-      <div class="security-layout">
-        <!-- System Health Panel -->
-        <div class="panel-card">
-          <div class="panel-header">
-            <h3>&#9881; System Telemetry &amp; Resource Health</h3>
-            <span class="badge-status ok">ENCLAVE HEALTHY</span>
-          </div>
-          <div class="telemetry-grid">
-            <div class="tel-box">
-              <span class="tel-label">Packets / Sec Ingest</span>
-              <span class="tel-val text-green" id="metricPps">--</span>
-            </div>
-            <div class="tel-box">
-              <span class="tel-label">Flows / Sec Processed</span>
-              <span class="tel-val text-cyan" id="metricFps">--</span>
-            </div>
-            <div class="tel-box">
-              <span class="tel-label">Streaming Queue Depth</span>
-              <span class="tel-val text-green" id="metricQueue">0</span>
-            </div>
-            <div class="tel-box">
-              <span class="tel-label">Dropped Packets / Events</span>
-              <span class="tel-val text-green" id="metricDropped">0</span>
-            </div>
-            <div class="tel-box">
-              <span class="tel-label">P95 Pipeline Latency</span>
-              <span class="tel-val text-purple" id="metricP95">2.85 ms</span>
-            </div>
-            <div class="tel-box">
-              <span class="tel-label">P50 Processing Latency</span>
-              <span class="tel-val text-purple" id="metricP50">1.12 ms</span>
-            </div>
-            <div class="tel-box">
-              <span class="tel-label">Memory Footprint</span>
-              <span class="tel-val text-yellow" id="metricMem">186.4 MB</span>
-            </div>
-            <div class="tel-box">
-              <span class="tel-label">CPU Utilization</span>
-              <span class="tel-val text-yellow" id="metricCpu">4.2%</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Security Boundary Panel (PS 26145 Enclave Guarantees) -->
-        <div class="panel-card security-boundary-card">
-          <div class="panel-header">
-            <h3>&#128737; PS 26145 Enclave Security Boundary Verification</h3>
-            <span class="badge-status ok" id="secVerdictBadge">VERDICT: PASS</span>
-          </div>
-          <div class="boundary-checklist">
-            <div class="check-item ok">
-              <div class="check-icon">&#10004;</div>
-              <div class="check-content">
-                <strong>Passive Ingest Only</strong>
-                <p>Telemetry ingest is strictly passive (optical TAP / span mirroring). Passive ingest: YES.</p>
-              </div>
-            </div>
-            <div class="check-item ok">
-              <div class="check-icon">&#10004;</div>
-              <div class="check-content">
-                <strong>Zero Network Writes in Detection Runtime</strong>
-                <p>No packet transmission, injection, TCP reset, or egress connection occurs in detection runtime. Network writes: 0.</p>
-              </div>
-            </div>
-            <div class="check-item ok">
-              <div class="check-icon">&#10004;</div>
-              <div class="check-content">
-                <strong>Active Response / Mitigation: DISABLED</strong>
-                <p>Zero automated mitigation, IP blocking, or firewall manipulation endpoints exist. Active response: DISABLED.</p>
-              </div>
-            </div>
-            <div class="check-item ok">
-              <div class="check-icon">&#10004;</div>
-              <div class="check-content">
-                <strong>Zero Payload Decryption</strong>
-                <p>All analysis strictly operates on protocol headers, packet timing, TLS metadata, and statistical flow features. Payload decryption: NONE.</p>
-              </div>
-            </div>
-            <div class="check-item ok">
-              <div class="check-icon">&#10004;</div>
-              <div class="check-content">
-                <strong>Workspace &amp; Repository Integrity</strong>
-                <p>Canonical repository is preserved with zero nested copies, junctions, or recursive clones. Workspace integrity: PASS.</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="enclave-statement-box">
-            &#9888; <strong>Mandatory Enclave Assertion:</strong> "Detection is out-of-band and read-only."
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </main>
-
-  <!-- Live Clock Script -->
-  <script>
-    function updateClock() {
-      const now = new Date();
-      const el = document.getElementById('socClock');
-      if (el) el.textContent = now.toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
-    }
-    setInterval(updateClock, 1000);
-    updateClock();
-  </script>
+  <!-- Application Logic -->
   <script src="/static/app.js"></script>
 </body>
 </html>
